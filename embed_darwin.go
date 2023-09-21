@@ -10,11 +10,11 @@ import (
 )
 
 //go:embed deps/darwin/libstable-diffusion-arm64.dylib
-var libRwkvArm []byte
+var libStableDiffusion []byte
 
 var libName = "libstable-diffusion-*.dylib"
 
 func getDl() []byte {
 	//TODO: support x86
-	return libRwkvArm
+	return libStableDiffusion
 }

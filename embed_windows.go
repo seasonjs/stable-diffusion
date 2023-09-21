@@ -5,4 +5,14 @@
 
 package stable_diffusion
 
-//TODO support windows
+import _ "embed"
+
+//go:embed deps/windows/stable-diffusion.dll
+var libStableDiffusion []byte
+
+var libName = "stable-diffusion-*.dll"
+
+func getDl() []byte {
+	//TODO: support x86
+	return libStableDiffusion
+}
