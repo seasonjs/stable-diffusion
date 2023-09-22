@@ -7,12 +7,12 @@ package stable_diffusion
 
 import _ "embed"
 
-//go:embed deps/windows/stable-diffusion.dll
-var libStableDiffusion []byte
+//go:embed deps/windows/stable-diffusion_avx2_x64.dll
+var libStableDiffusionAvx []byte
 
 var libName = "stable-diffusion-*.dll"
 
 func getDl() []byte {
 	//TODO: support x86
-	return libStableDiffusion
+	return libStableDiffusionAvx
 }
