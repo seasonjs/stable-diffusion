@@ -13,7 +13,7 @@ func getLibrary() string {
 	case "linux":
 		return "./deps/linux/libstable-diffusion.so"
 	case "windows":
-		return "./deps/windows/stable-diffusion.dll"
+		return "./deps/windows/stable-diffusion_avx2_x64.dll"
 	default:
 		panic(fmt.Errorf("GOOS=%s is not supported", runtime.GOOS))
 	}
