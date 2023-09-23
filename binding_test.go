@@ -47,7 +47,7 @@ func writeToFile(byteData []byte, height int, width int) {
 
 	for y := 0; y < height; y++ {
 		for x := 0; x < width; x++ {
-			idx := (y * x) * 3
+			idx := (y*width + x) * 3
 			img.Set(x, y, color.RGBA{
 				R: byteData[idx],
 				G: byteData[idx+1],
@@ -81,6 +81,6 @@ func TestSD(t *testing.T) {
 	ctx := sd.NewStableDiffusionCtx(20, true, true, STD_DEFAULT_RNG)
 	defer ctx.Close()
 	ctx.StableDiffusionLoadFromFile("./data/sd_v1-4_ggml_Q5.bin", DEFAULT)
-	data := ctx.StableDiffusionTextToImage("a lovely cat", "", 7.0, 512, 512, EULER_A, 20, 42)
+	data := ctx.StableDiffusionTextToImage("a lovely cat", "", 7.0, 128, 128, EULER_A, 20, 42)
 	writeToFile(data, 128, 128)
 }
