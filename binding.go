@@ -2,7 +2,6 @@ package stable_diffusion
 
 import (
 	"github.com/ebitengine/purego"
-	"runtime"
 	"unsafe"
 )
 
@@ -239,7 +238,7 @@ func (c *CSDCtx) StableDiffusionTextToImage(prompt string, negativePrompt string
 	c.csd.cSetTxt2imgSampleSteps(options, sampleSteps)
 	c.csd.cSetTxt2imgSeed(options, seed)
 	output := c.csd.cTxt2img(c.ctx, options, &outputSize)
-	runtime.KeepAlive(output)
+	//runtime.KeepAlive(output)
 	data := unsafe.Slice(output, outputSize)
 	return data
 }
