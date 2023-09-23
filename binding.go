@@ -2,6 +2,7 @@ package stable_diffusion
 
 import (
 	"github.com/ebitengine/purego"
+	"runtime"
 	"unsafe"
 )
 
@@ -100,8 +101,8 @@ type CStableDiffusion struct {
 	cCreateStableDiffusion  func(nThreads int, vaeDecodeOnly bool, freeParamsImmediately bool, rngType string) uintptr
 	cDestroyStableDiffusion func(sd uintptr)
 	cLoadFromFile           func(sd uintptr, path string, schedule string)
-	cTxt2img                func(sd uintptr, options uintptr) uintptr
-	cImg2img                func(sd uintptr, options uintptr) uintptr
+	cTxt2img                func(sd uintptr, options uintptr, outputSize *int64) *byte
+	cImg2img                func(sd uintptr, options uintptr, output *byte, outputSize *int64)
 
 	cSetStableDiffusionLogLevel   func(level string)
 	cGetStableDiffusionSystemInfo func() string
@@ -136,8 +137,8 @@ func NewCStableDiffusion(libraryPath string) (*CStableDiffusion, error) {
 		createStableDiffusion  func(nThreads int, vaeDecodeOnly bool, freeParamsImmediately bool, rngType string) uintptr
 		destroyStableDiffusion func(sd uintptr)
 		loadFromFile           func(sd uintptr, path string, schedule string)
-		txt2img                func(sd uintptr, options uintptr) uintptr
-		img2img                func(sd uintptr, options uintptr) uintptr
+		txt2img                func(sd uintptr, options uintptr, outputSize *int64) *byte
+		img2img                func(sd uintptr, options uintptr, output *byte, outputSize *int64)
 
 		setStableDiffusionLogLevel   func(level string)
 		getStableDiffusionSystemInfo func() string
@@ -205,7 +206,7 @@ func NewCStableDiffusion(libraryPath string) (*CStableDiffusion, error) {
 	}, nil
 }
 
-func (cSD *CStableDiffusion) CreateStableDiffusion(nThreads int, vaeDecodeOnly bool, freeParamsImmediately bool, rngType RNGType) *CSDCtx {
+func (cSD *CStableDiffusion) NewStableDiffusionCtx(nThreads int, vaeDecodeOnly bool, freeParamsImmediately bool, rngType RNGType) *CSDCtx {
 	ctx := cSD.cCreateStableDiffusion(nThreads, vaeDecodeOnly, freeParamsImmediately, string(rngType))
 	return &CSDCtx{ctx: ctx, csd: cSD}
 }
@@ -227,7 +228,8 @@ func (c *CSDCtx) StableDiffusionLoadFromFile(path string, schedule Schedule) {
 	c.csd.cLoadFromFile(c.ctx, path, string(schedule))
 }
 
-func (c *CSDCtx) StableDiffusionTextToImg(prompt string, negativePrompt string, cfgScale float32, width int, height int, sampleMethod SampleMethod, sampleSteps int, seed int64) []byte {
+func (c *CSDCtx) StableDiffusionTextToImage(prompt string, negativePrompt string, cfgScale float32, width int, height int, sampleMethod SampleMethod, sampleSteps int, seed int64) []byte {
+	var outputSize int64
 	options := c.csd.cNewSdImg2imgOptions()
 	c.csd.cSetTxt2imgPrompt(options, prompt)
 	c.csd.cSetTxt2imgNegativePrompt(options, negativePrompt)
@@ -236,13 +238,17 @@ func (c *CSDCtx) StableDiffusionTextToImg(prompt string, negativePrompt string, 
 	c.csd.cSetTxt2imgSampleMethod(options, string(sampleMethod))
 	c.csd.cSetTxt2imgSampleSteps(options, sampleSteps)
 	c.csd.cSetTxt2imgSeed(options, seed)
-	c.csd.cTxt2img(c.ctx, options)
-	return nil
+	output := c.csd.cTxt2img(c.ctx, options, &outputSize)
+	runtime.KeepAlive(output)
+	data := unsafe.Slice(output, outputSize)
+	return data
 }
 
-func (c *CSDCtx) StableDiffusionImgToImg(initImg []byte, prompt string, negativePrompt string, cfgScale float32, width int, height int, sampleMethod SampleMethod, sampleSteps int, strength float32, seed int64) []byte {
+func (c *CSDCtx) StableDiffusionImgToImage(initImg []byte, prompt string, negativePrompt string, cfgScale float32, width int, height int, sampleMethod SampleMethod, sampleSteps int, strength float32, seed int64) []byte {
+	var output *byte
+	var outputSize int64
 	options := c.csd.cNewSdImg2imgOptions()
-	c.csd.cSetImg2imgInitImg(options, uintptr(unsafe.Pointer(&initImg[0])), int64(len(initImg)+1))
+	c.csd.cSetImg2imgInitImg(options, uintptr(unsafe.Pointer(&initImg[0])), int64(len(initImg)))
 	c.csd.cSetImg2imgPrompt(options, prompt)
 	c.csd.cSetImg2imgNegativePrompt(options, negativePrompt)
 	c.csd.cSetImg2imgCfgScale(options, cfgScale)
@@ -251,8 +257,9 @@ func (c *CSDCtx) StableDiffusionImgToImg(initImg []byte, prompt string, negative
 	c.csd.cSetImg2imgSampleSteps(options, sampleSteps)
 	c.csd.cSetImg2imgStrength(options, strength)
 	c.csd.cSetImg2imgSeed(options, seed)
-	c.csd.cTxt2img(c.ctx, options)
-	return nil
+	c.csd.cImg2img(c.ctx, options, output, &outputSize)
+	data := unsafe.Slice(output, outputSize)
+	return data
 }
 
 func (c *CSDCtx) Close() {
