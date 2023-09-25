@@ -16,7 +16,7 @@ import (
 func getLibrary() string {
 	switch runtime.GOOS {
 	case "darwin":
-		return "./deps/darwin/libstable-diffusion-arm64.dylib"
+		return "./deps/darwin/libstable-diffusion_arm64.dylib"
 	case "linux":
 		return "./deps/linux/libstable-diffusion.so"
 	case "windows":

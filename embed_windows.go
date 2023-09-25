@@ -13,6 +13,5 @@ var libStableDiffusionAvx []byte
 var libName = "stable-diffusion-*.dll"
 
 func getDl() []byte {
-	//TODO: support x86
 	return libStableDiffusionAvx
 }

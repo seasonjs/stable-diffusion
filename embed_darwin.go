@@ -9,12 +9,11 @@ import (
 	_ "embed" // Needed for go:embed
 )
 
-//go:embed deps/darwin/libstable-diffusion-arm64.dylib
+//go:embed deps/darwin/libstable-diffusion_arm64.dylib
 var libStableDiffusion []byte
 
 var libName = "libstable-diffusion-*.dylib"
 
 func getDl() []byte {
-	//TODO: support x86
 	return libStableDiffusion
 }
