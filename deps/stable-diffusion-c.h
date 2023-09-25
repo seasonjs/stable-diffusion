@@ -2,6 +2,8 @@
 #define STABLE_DIFFUSION_CPP_STABLE_DIFFUSION_C_H
 
 #include "stable-diffusion.h"
+#include <string>
+#include <map>
 
 #ifdef STABLE_DIFFUSION_SHARED
 #if defined(_WIN32) && !defined(__MINGW32__)
@@ -31,6 +33,7 @@ struct sd_txt2img_options;
 struct sd_img2img_options;
 
 // These methods are used in binding in other languages,golang, python,etc.
+// Many languages don't support conversion to c struct, so we need provide struct setter.
 
 //==============================sd_txt2img_options===============================
 STABLE_DIFFUSION_API sd_txt2img_options *new_sd_txt2img_options();
@@ -81,9 +84,9 @@ STABLE_DIFFUSION_API void destroy_stable_diffusion(void *sd);
 
 STABLE_DIFFUSION_API bool load_from_file(void *sd, const char *file_path, const char *schedule);
 
-STABLE_DIFFUSION_API uint8_t *txt2img(void *sd, sd_txt2img_options *opt);
+STABLE_DIFFUSION_API const unsigned char *txt2img(void *sd, sd_txt2img_options *opt);
 
-STABLE_DIFFUSION_API uint8_t *img2img(void *sd, sd_img2img_options *opt);
+STABLE_DIFFUSION_API const unsigned char *img2img(void *sd, sd_img2img_options *opt);
 
 STABLE_DIFFUSION_API void set_stable_diffusion_log_level(const char *level);
 
