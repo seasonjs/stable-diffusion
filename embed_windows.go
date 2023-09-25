@@ -3,7 +3,7 @@
 
 //go:build windows && amd64
 
-package stable_diffusion
+package sd
 
 import _ "embed"
 

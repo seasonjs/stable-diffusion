@@ -3,7 +3,7 @@
 
 //go:build darwin
 
-package stable_diffusion
+package sd
 
 import (
 	_ "embed" // Needed for go:embed

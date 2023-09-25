@@ -3,7 +3,7 @@
 
 //go:build windows
 
-package stable_diffusion
+package sd
 
 import (
 	"golang.org/x/sys/windows"
