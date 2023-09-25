@@ -3,7 +3,7 @@
 
 //go:build darwin || linux
 
-package stable_diffusion
+package sd
 
 import (
 	"github.com/ebitengine/purego"

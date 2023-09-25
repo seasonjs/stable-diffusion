@@ -3,6 +3,6 @@
 
 //go:build linux
 
-package stable_diffusion
+package sd
 
 //TODO support linux
