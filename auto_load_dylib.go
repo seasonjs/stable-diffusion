@@ -8,7 +8,7 @@ import (
 	"os"
 )
 
-func dumpRwkvLibrary() (*os.File, error) {
+func dumpSDLibrary() (*os.File, error) {
 	file, err := os.CreateTemp("", libName)
 	if err != nil {
 		return nil, fmt.Errorf("error creating temp file: %w", err)

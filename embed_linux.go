@@ -5,4 +5,10 @@
 
 package sd
 
-//TODO support linux
+// TODO support linux
+var libName = "libstable-diffusion-*.so"
+
+func getDl() []byte {
+	panic("Automatic loading of dynamic library failed, please use `NewStableDiffusionModel` method load manually. ")
+	return nil
+}

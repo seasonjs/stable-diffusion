@@ -5,13 +5,20 @@
 
 package sd
 
-import _ "embed"
+import (
+	_ "embed"
+	"golang.org/x/sys/cpu"
+)
 
-//go:embed deps/windows/stable-diffusion_avx2_x64.dll
+//go:embed deps/windows/stable-diffusion-avx2.dll
 var libStableDiffusionAvx []byte
 
 var libName = "stable-diffusion-*.dll"
 
 func getDl() []byte {
-	return libStableDiffusionAvx
+	if cpu.X86.HasAVX2 {
+		return libStableDiffusionAvx
+	}
+	panic("Automatic loading of dynamic library failed, please use `NewStableDiffusionModel` method load manually. ")
+	return nil
 }
