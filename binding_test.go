@@ -20,7 +20,7 @@ func getLibrary() string {
 	case "linux":
 		return "./deps/linux/libstable-diffusion.so"
 	case "windows":
-		return "./deps/windows/stable-diffusion_avx2_x64.dll"
+		return "./deps/windows/stable-diffusion_avx2.dll"
 	default:
 		panic(fmt.Errorf("GOOS=%s is not supported", runtime.GOOS))
 	}
@@ -107,7 +107,7 @@ func TestStableDiffusionTextToImage(t *testing.T) {
 	}
 	ctx := sd.NewStableDiffusionCtx(8, true, true, CUDA_RNG)
 	defer ctx.Close()
-	ctx.StableDiffusionLoadFromFile("./data/miniSD-ggml-model-q5_0.bin", DEFAULT)
+	ctx.StableDiffusionLoadFromFile("./models/miniSD-ggml-model-q5_0.bin", DEFAULT)
 	data := ctx.StableDiffusionTextToImage("A lovely cat, high quality", "", 7.0, 256, 256, EULER_A, 20, 42)
 	writeToFile(t, data, 256, 256, "./data/output.png")
 }
@@ -119,7 +119,7 @@ func TestStableDiffusionImgToImage(t *testing.T) {
 	}
 	ctx := sd.NewStableDiffusionCtx(8, false, true, CUDA_RNG)
 	defer ctx.Close()
-	ctx.StableDiffusionLoadFromFile("./data/miniSD-ggml-model-q5_0.bin", DEFAULT)
+	ctx.StableDiffusionLoadFromFile("./models/miniSD-ggml-model-q5_0.bin", DEFAULT)
 	img := readFromFile(t, "./data/output.png")
 	data := ctx.StableDiffusionImageToImage(img, "A lovely cat that theme pink", "", 7.0, 256, 256, EULER_A, 20, 0.4, 42)
 	writeToFile(t, data, 256, 256, "./data/output1.png")
