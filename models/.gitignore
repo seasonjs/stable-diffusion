@@ -1,0 +1,4 @@
+*.ckpt
+*.pt
+*.pth
+*.bin

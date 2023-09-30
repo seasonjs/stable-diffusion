@@ -15,7 +15,7 @@ func TestNewStableDiffusionAutoModelPredict(t *testing.T) {
 		t.Log(err)
 	}
 	defer model.Close()
-	err = model.LoadFromFile("./data/miniSD-ggml-model-q5_0.bin")
+	err = model.LoadFromFile("./models/miniSD-ggml-model-q5_0.bin")
 	if err != nil {
 		t.Log(err)
 	}
@@ -41,7 +41,7 @@ func TestNewStableDiffusionAutoModelImagePredict(t *testing.T) {
 		t.Log(err)
 	}
 	defer model.Close()
-	err = model.LoadFromFile("./data/miniSD-ggml-model-q5_0.bin")
+	err = model.LoadFromFile("./models/miniSD-ggml-model-q5_0.bin")
 	if err != nil {
 		t.Log(err)
 	}
