@@ -21,11 +21,11 @@ go get github.com/seasonjs/stable-diffusion
 
 See `deps` folder for dylib compatibility, push request is welcome.
 
-| platform | x32         | x64                 | arm         |
-|----------|-------------|---------------------|-------------|
-| windows  | not support | support             | not support |
-| linux    | not support | not support         | not support |
-| darwin   | not support | support  (not test) | support     |
+| platform | x32         | x64                     | arm         |
+|----------|-------------|-------------------------|-------------|
+| windows  | not support | support avx/avx2/avx512 | not support |
+| linux    | not support | support                 | not support |
+| darwin   | not support | support  (no test)      | support     |
 
 ## Usage
 
@@ -101,7 +101,7 @@ func main()  {
 		panic(err)
 	}
 	defer outfile.Close()
-	err = model.ImagePredict(inFile, "pink cat", outfile)
+	err = model.ImagePredict(inFile, "the cat that wears shoes", outfile)
 }
 ```
 If `NewStableDiffusionAutoModel` can't automatic loading of dynamic library, please use `NewStableDiffusionModel` method load manually.
@@ -158,6 +158,12 @@ See detail at [stable-diffusion-doc](https://pkg.go.dev/github.com/seasonjs/stab
 * [stable-diffusion-cpp](https://github.com/leejet/stable-diffusion.cpp)
 * [ggml.cpp](https://github.com/leejet/ggml.cpp)
 * [purego](https://github.com/ebitengine/purego)
+
+## Successful Examples
+
+<p align="center">
+  <img src="./assets/love_cat2.png" width="512x">
+</p>
 
 ## License
 

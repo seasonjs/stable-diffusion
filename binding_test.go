@@ -4,6 +4,7 @@
 package sd
 
 import (
+	"encoding/base64"
 	"fmt"
 	"image"
 	"image/color"
@@ -29,7 +30,7 @@ func getLibrary() string {
 // int n_threads = -1;
 // std::string mode = TXT2IMG;
 // std::string model_path;
-// std::string output_path = "output.png";
+// std::string output_path = "love_cat2.png";
 // std::string init_img;
 // std::string prompt;
 // std::string negative_prompt;
@@ -105,11 +106,11 @@ func TestStableDiffusionTextToImage(t *testing.T) {
 	if err != nil {
 		t.Log(err)
 	}
-	ctx := sd.NewStableDiffusionCtx(8, true, true, CUDA_RNG)
+	ctx := sd.NewStableDiffusionCtx(8, true, true, "", CUDA_RNG)
 	defer ctx.Close()
 	ctx.StableDiffusionLoadFromFile("./models/miniSD-ggml-model-q5_0.bin", DEFAULT)
-	data := ctx.StableDiffusionTextToImage("A lovely cat, high quality", "", 7.0, 256, 256, EULER_A, 20, 42)
-	writeToFile(t, data, 256, 256, "./data/output.png")
+	data, _ := ctx.StableDiffusionTextToImage("A lovely cat, high quality", "", 7.0, 256, 256, EULER_A, 20, 42)
+	writeToFile(t, data, 256, 256, "./data/love_cat2.png")
 }
 
 func TestStableDiffusionImgToImage(t *testing.T) {
@@ -117,10 +118,16 @@ func TestStableDiffusionImgToImage(t *testing.T) {
 	if err != nil {
 		t.Log(err)
 	}
-	ctx := sd.NewStableDiffusionCtx(8, false, true, CUDA_RNG)
+	ctx := sd.NewStableDiffusionCtx(8, false, true, "", CUDA_RNG)
 	defer ctx.Close()
 	ctx.StableDiffusionLoadFromFile("./models/miniSD-ggml-model-q5_0.bin", DEFAULT)
-	img := readFromFile(t, "./data/output.png")
-	data := ctx.StableDiffusionImageToImage(img, "A lovely cat that theme pink", "", 7.0, 256, 256, EULER_A, 20, 0.4, 42)
+	img := readFromFile(t, "./data/love_cat2.png")
+	data, _ := ctx.StableDiffusionImageToImage(img, "A lovely cat that theme pink", "", 7.0, 256, 256, EULER_A, 20, 0.4, 42)
 	writeToFile(t, data, 256, 256, "./data/output1.png")
+}
+
+func TestBase64(t *testing.T) {
+	img := readFromFile(t, "./assets/love_cat2.png")
+	imgBase64 := base64.StdEncoding.EncodeToString(img)
+	t.Log(imgBase64)
 }

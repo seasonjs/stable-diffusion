@@ -9,7 +9,7 @@ import (
 	_ "embed" // Needed for go:embed
 )
 
-//go:embed deps/darwin/libstable-diffusion_arm64.dylib
+//go:embed deps/darwin/libsd-abi.dylib
 var libStableDiffusion []byte
 
 var libName = "libstable-diffusion-*.dylib"

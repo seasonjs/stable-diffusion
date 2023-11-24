@@ -21,6 +21,7 @@ type StableDiffusionOptions struct {
 	Threads               int
 	VaeDecodeOnly         bool
 	FreeParamsImmediately bool
+	LoraModelDir          string
 	RngType               RNGType
 
 	Schedule Schedule
@@ -47,6 +48,7 @@ var DefaultStableDiffusionOptions = StableDiffusionOptions{
 	Threads:               -1, // auto
 	VaeDecodeOnly:         true,
 	FreeParamsImmediately: true,
+	LoraModelDir:          "",
 	RngType:               CUDA_RNG,
 
 	Schedule: DEFAULT,
@@ -82,7 +84,7 @@ func NewStableDiffusionModel(dylibPath string, options StableDiffusionOptions) (
 	if err != nil {
 		return nil, err
 	}
-	ctx := sd.NewStableDiffusionCtx(options.Threads, options.VaeDecodeOnly, options.FreeParamsImmediately, options.RngType)
+	ctx := sd.NewStableDiffusionCtx(options.Threads, options.VaeDecodeOnly, options.FreeParamsImmediately, options.LoraModelDir, options.RngType)
 	return &StableDiffusionModel{
 		dylibPath: dylibPath,
 		ctx:       ctx,
@@ -96,7 +98,19 @@ func (sd *StableDiffusionModel) LoadFromFile(path string) error {
 }
 
 func (sd *StableDiffusionModel) Predict(prompt string, writer io.Writer) error {
-	outputsBytes := sd.ctx.StableDiffusionTextToImage(prompt, sd.options.NegativePrompt, sd.options.CfgScale, sd.options.Width, sd.options.Height, sd.options.SampleMethod, sd.options.SampleSteps, sd.options.Seed)
+	outputsBytes, err := sd.ctx.StableDiffusionTextToImage(
+		prompt,
+		sd.options.NegativePrompt,
+		sd.options.CfgScale,
+		sd.options.Width,
+		sd.options.Height,
+		sd.options.SampleMethod,
+		sd.options.SampleSteps,
+		sd.options.Seed,
+	)
+	if err != nil {
+		return err
+	}
 	outputsImage := bytesToImage(outputsBytes, sd.options.Width, sd.options.Height)
 	return imageToWriter(outputsImage, sd.options.OutputsImageType, writer)
 }
@@ -107,7 +121,21 @@ func (sd *StableDiffusionModel) ImagePredict(reader io.Reader, prompt string, wr
 		return err
 	}
 	bytesImg := imageToBytes(decode)
-	outputsBytes := sd.ctx.StableDiffusionImageToImage(bytesImg, prompt, sd.options.NegativePrompt, sd.options.CfgScale, sd.options.Width, sd.options.Height, sd.options.SampleMethod, sd.options.SampleSteps, sd.options.Strength, sd.options.Seed)
+	outputsBytes, err := sd.ctx.StableDiffusionImageToImage(
+		bytesImg,
+		prompt,
+		sd.options.NegativePrompt,
+		sd.options.CfgScale,
+		sd.options.Width,
+		sd.options.Height,
+		sd.options.SampleMethod,
+		sd.options.SampleSteps,
+		sd.options.Strength,
+		sd.options.Seed,
+	)
+	if err != nil {
+		return err
+	}
 	outputsImage := bytesToImage(outputsBytes, sd.options.Width, sd.options.Height)
 	return imageToWriter(outputsImage, sd.options.OutputsImageType, writer)
 }
