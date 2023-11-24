@@ -5,10 +5,9 @@
 
 package sd
 
-// TODO support linux
-var libName = "libstable-diffusion-*.so"
+//go:embed deps/linux/libsd-abi.so
+var libStableDiffusion []byte
 
 func getDl() []byte {
-	panic("Automatic loading of dynamic library failed, please use `NewStableDiffusionModel` method load manually. ")
-	return nil
+	return libStableDiffusion
 }
