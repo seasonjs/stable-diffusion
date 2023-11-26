@@ -79,15 +79,15 @@ STABLE_DIFFUSION_API void destroy_stable_diffusion(void* sd);
 
 STABLE_DIFFUSION_API bool load_from_file(void* sd, const char* file_path, const char* schedule);
 
-STABLE_DIFFUSION_API uint8_t* txt2img(void* sd, const sd_txt2img_options* opt, int64_t* output_size);
+STABLE_DIFFUSION_API const char * txt2img(void* sd, const sd_txt2img_options* opt);
 
-STABLE_DIFFUSION_API uint8_t* img2img(void* sd, const sd_img2img_options* opt, int64_t* output_size);
+STABLE_DIFFUSION_API const char* img2img(void* sd, const sd_img2img_options* opt);
 
 STABLE_DIFFUSION_API void set_stable_diffusion_log_level(const char* level);
 
 STABLE_DIFFUSION_API const char* get_stable_diffusion_system_info();
 
-STABLE_DIFFUSION_API void free_buffer(const uint8_t* buffer);
+STABLE_DIFFUSION_API void free_buffer(const char* buffer);
 
 #ifdef __cplusplus
 }

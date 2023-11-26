@@ -15,16 +15,16 @@ func TestNewStableDiffusionAutoModelPredict(t *testing.T) {
 		t.Error(err)
 	}
 	defer model.Close()
-	err = model.LoadFromFile("./models/sd_v1-4_ggml_Q5.bin")
+	err = model.LoadFromFile("./models/v1-5-pruned-emaonly_ggml_f16.bin")
 	if err != nil {
 		t.Error(err)
 	}
-	file, err := os.Create("./assets/love_cat2.png")
+	file, err := os.Create("./assets/love_cat3.png")
 	defer file.Close()
 	if err != nil {
 		t.Error(err)
 	}
-	err = model.Predict("A lovely cat, high quality", file)
+	err = model.Predict("a lovely cat, high quality", file)
 	if err != nil {
 		t.Error(err)
 	}
@@ -41,7 +41,7 @@ func TestNewStableDiffusionAutoModelImagePredict(t *testing.T) {
 		t.Error(err)
 	}
 	defer model.Close()
-	err = model.LoadFromFile("./models/sd_v1-4_ggml_Q5.bin")
+	err = model.LoadFromFile("./models/v1-5-pruned-emaonly_ggml_f16.bin")
 	if err != nil {
 		t.Error(err)
 	}
