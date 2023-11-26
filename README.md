@@ -17,7 +17,7 @@ of ggml.cpp.
 go get github.com/seasonjs/stable-diffusion
 ```
 
-## Compatibility
+## AutoModel Compatibility
 
 See `deps` folder for dylib compatibility, push request is welcome.
 
@@ -26,6 +26,18 @@ See `deps` folder for dylib compatibility, push request is welcome.
 | windows  | not support | support avx/avx2/avx512 | not support |
 | linux    | not support | support                 | not support |
 | darwin   | not support | support  (no test)      | support     |
+
+## AutoModel Dynamic Libraries Disclaimer
+
+#### The Source of dynamic Libraries
+These dynamic libraries come from [stable-diffusion.cpp-build release](https://github.com/seasonjs/stable-diffusion.cpp-build/releases), The dynamic library version can be obtained by viewing [stable-diffusion.version file](./deps/stable-diffusion.version)
+Anyone can check the consistency of the file by checksum the md5 of the file.
+
+#### The Security Of Dynamic Libraries
+All I can say is that the creation of the dynamic library is public and does not contain any subjective malicious logic.
+If you are worried about the security of the dynamic library during the use process, you can build it yourself.
+
+**I and any author related to dynamic libraries do not assume any problems, responsibilities or legal liability during use.**
 
 ## Usage
 
