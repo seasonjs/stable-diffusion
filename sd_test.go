@@ -8,24 +8,35 @@ import (
 
 func TestNewStableDiffusionAutoModelPredict(t *testing.T) {
 	options := DefaultStableDiffusionOptions
-	options.Width = 512
-	options.Height = 512
+	options.Width = 256
+	options.Height = 256
+	options.BatchCount = 4
+	options.SampleSteps = 8
 	t.Log(options)
 	model, err := NewStableDiffusionAutoModel(options)
 	if err != nil {
 		t.Error(err)
 	}
 	defer model.Close()
-	err = model.LoadFromFile("./models/v1-5-pruned-emaonly_ggml_f16.bin")
+	err = model.LoadFromFile("./models/miniSD-f16.gguf")
 	if err != nil {
 		t.Error(err)
 	}
-	file, err := os.Create("./assets/love_cat3.png")
-	defer file.Close()
-	if err != nil {
-		t.Error(err)
+	writers := make([]io.Writer, options.BatchCount)
+	filenames := []string{
+		"./assets/love_cat3.png",
+		"./assets/love_cat4.png",
+		"./assets/love_cat5.png",
+		"./assets/love_cat6.png"}
+	for idx, filename := range filenames {
+		file, err := os.Create(filename)
+		if err != nil {
+			t.Error(err)
+		}
+		defer file.Close()
+		writers[idx] = file
 	}
-	writers := []io.Writer{file}
+
 	err = model.Predict("a lovely cat, high quality", writers)
 	if err != nil {
 		t.Error(err)

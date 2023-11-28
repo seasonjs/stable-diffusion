@@ -173,9 +173,18 @@ See detail at [stable-diffusion-doc](https://pkg.go.dev/github.com/seasonjs/stab
 
 ## Successful Examples
 
-<p align="center">
-  <img src="./assets/love_cat2.png" width="512x">
-</p>
+<span>
+  <img src="./assets/love_cat2.png" width="128x">
+</span>
+<span>
+  <img src="./assets/love_cat3.png" width="128x">
+</span>
+<span>
+  <img src="./assets/love_cat4.png" width="128x">
+</span>
+<span>
+  <img src="./assets/love_cat6.png" width="128x">
+</span>
 
 ## License
 

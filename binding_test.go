@@ -109,8 +109,8 @@ func TestStableDiffusionTextToImage(t *testing.T) {
 	ctx := sd.NewStableDiffusionCtx(8, true, true, "", CUDA_RNG)
 	defer ctx.Close()
 	ctx.StableDiffusionLoadFromFile("./models/miniSD-ggml-model-q5_0.bin", DEFAULT)
-	data, _ := ctx.StableDiffusionTextToImage("A lovely cat, high quality", "", 7.0, 256, 256, EULER_A, 20, 42)
-	writeToFile(t, data, 256, 256, "./data/love_cat2.png")
+	data, _ := ctx.StableDiffusionTextToImage("A lovely cat, high quality", "", 7.0, 256, 256, EULER_A, 20, 42, 1)
+	writeToFile(t, data[1], 256, 256, "./data/love_cat2.png")
 }
 
 func TestStableDiffusionImgToImage(t *testing.T) {
