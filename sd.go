@@ -7,6 +7,7 @@ import (
 	"image/jpeg"
 	"image/png"
 	"io"
+	"log"
 	"os"
 )
 
@@ -34,6 +35,8 @@ type StableDiffusionOptions struct {
 	SampleSteps      int
 	Strength         float32
 	Seed             int64
+	BatchCount       int
+	GpuEnable        bool
 	OutputsImageType OutputsImageType
 }
 
@@ -61,15 +64,21 @@ var DefaultStableDiffusionOptions = StableDiffusionOptions{
 	SampleSteps:      20,
 	Strength:         0.4,
 	Seed:             42,
+	BatchCount:       1,
 	OutputsImageType: PNG,
 }
 
 func NewStableDiffusionAutoModel(options StableDiffusionOptions) (*StableDiffusionModel, error) {
-	file, err := dumpSDLibrary()
+	file, err := dumpSDLibrary(options.GpuEnable)
 	if err != nil {
 		return nil, err
 	}
 
+	if options.GpuEnable {
+		log.Printf("If you want to try offload your model to the GPU. " +
+			"Please confirm the size of your GPU memory to prevent memory overflow." +
+			"If the model is larger than GPU memory, please specify the layers to offload.")
+	}
 	dylibPath := file.Name()
 	model, err := NewStableDiffusionModel(dylibPath, options)
 	if err != nil {
@@ -84,6 +93,11 @@ func NewStableDiffusionModel(dylibPath string, options StableDiffusionOptions) (
 	if err != nil {
 		return nil, err
 	}
+
+	if options.BatchCount < 1 {
+		options.BatchCount = 1
+	}
+
 	ctx := sd.NewStableDiffusionCtx(options.Threads, options.VaeDecodeOnly, options.FreeParamsImmediately, options.LoraModelDir, options.RngType)
 	return &StableDiffusionModel{
 		dylibPath: dylibPath,
@@ -97,7 +111,7 @@ func (sd *StableDiffusionModel) LoadFromFile(path string) error {
 	return nil
 }
 
-func (sd *StableDiffusionModel) Predict(prompt string, writer io.Writer) error {
+func (sd *StableDiffusionModel) Predict(prompt string, writer []io.Writer) error {
 	outputsBytes, err := sd.ctx.StableDiffusionTextToImage(
 		prompt,
 		sd.options.NegativePrompt,
@@ -107,12 +121,22 @@ func (sd *StableDiffusionModel) Predict(prompt string, writer io.Writer) error {
 		sd.options.SampleMethod,
 		sd.options.SampleSteps,
 		sd.options.Seed,
+		sd.options.BatchCount,
 	)
+
 	if err != nil {
 		return err
 	}
-	outputsImage := bytesToImage(outputsBytes, sd.options.Width, sd.options.Height)
-	return imageToWriter(outputsImage, sd.options.OutputsImageType, writer)
+
+	for i := 0; i < sd.options.BatchCount; i++ {
+		outputsImage := bytesToImage(outputsBytes[i], sd.options.Width, sd.options.Height)
+		err = imageToWriter(outputsImage, sd.options.OutputsImageType, writer[i])
+		if err != nil {
+			return err
+		}
+	}
+
+	return nil
 }
 
 func (sd *StableDiffusionModel) ImagePredict(reader io.Reader, prompt string, writer io.Writer) error {

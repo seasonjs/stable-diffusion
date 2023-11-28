@@ -14,6 +14,9 @@ var libStableDiffusion []byte
 
 var libName = "libstable-diffusion-*.dylib"
 
-func getDl() []byte {
+func getDl(gpu bool) []byte {
+	if gpu {
+		panic("Not support darwin. Push request is welcome.")
+	}
 	return libStableDiffusion
 }
