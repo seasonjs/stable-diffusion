@@ -1,3 +1,6 @@
+// Copyright (c) seasonjs. All rights reserved.
+// Licensed under the MIT License. See License.txt in the project root for license information.
+
 package sd
 
 import (
@@ -112,6 +115,9 @@ func (sd *StableDiffusionModel) LoadFromFile(path string) error {
 }
 
 func (sd *StableDiffusionModel) Predict(prompt string, writer []io.Writer) error {
+	if len(writer) != sd.options.BatchCount {
+		return errors.New("writer count not match batch count")
+	}
 	outputsBytes, err := sd.ctx.StableDiffusionTextToImage(
 		prompt,
 		sd.options.NegativePrompt,

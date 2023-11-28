@@ -11,7 +11,6 @@ import (
 	"golang.org/x/sys/cpu"
 	"log"
 	"os/exec"
-	"regexp"
 	"strings"
 )
 
@@ -35,7 +34,13 @@ func getDl(gpu bool) []byte {
 		if err != nil {
 			log.Println(err)
 		}
-		log.Print("GPU: ", info)
+		log.Print("get gpu info: ", info)
+		// Name
+		// DriverVersion
+		// AdapterCompatibility
+		if info["AdapterCompatibility"] == "NVIDIA" {
+			return libStableDiffusionCuda12
+		}
 	}
 
 	if cpu.X86.HasAVX512 {
@@ -61,23 +66,33 @@ func runPowerShellCommand(command string) (string, error) {
 	return string(output), nil
 }
 
-func getGPUInfo() (string, error) {
+func getGPUInfo() (map[string]string, error) {
 	psCommand := "Get-WmiObject Win32_VideoController"
-
 	output, err := runPowerShellCommand(psCommand)
 	if err != nil {
-		return "", err
+		return nil, err
 	}
 	infos := strings.Split(output, "\r\n")
-	re := regexp.MustCompile(`^Name\s+:\s+(.+)`)
-	for _, info := range infos {
-		match := re.FindStringSubmatch(info)
-		if len(match) >= 2 {
-			// get the first match Name
-			gpuName := match[1]
-			return gpuName, nil
+	result := make(map[string]string, len(infos))
+	for _, line := range infos {
+		parts := strings.SplitN(line, ":", 2)
+		if len(parts) == 2 {
+			key := strings.TrimSpace(parts[0])
+			if strings.Contains(key, "__") || strings.Contains(key, "/") {
+				continue
+			}
+			value := strings.TrimSpace(parts[1])
+			if len(value) == 0 {
+				continue
+			}
+			if len(value) == 0 {
+				continue
+			}
+			result[key] = value
 		}
 	}
-
-	return "", errors.New("no gpu found")
+	if len(result["Name"]) > 0 {
+		return result, nil
+	}
+	return nil, errors.New("no gpu found")
 }

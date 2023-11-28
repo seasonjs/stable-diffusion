@@ -7,6 +7,7 @@ import (
 	"encoding/base64"
 	"errors"
 	"github.com/ebitengine/purego"
+	"unsafe"
 )
 
 type SDLogLevel string
@@ -108,8 +109,8 @@ type CStableDiffusion struct {
 	cCreateStableDiffusion  func(nThreads int, vaeDecodeOnly bool, freeParamsImmediately bool, loraModelDir string, rngType string) uintptr
 	cDestroyStableDiffusion func(sd uintptr)
 	cLoadFromFile           func(sd uintptr, path string, schedule string)
-	cTxt2img                func(sd uintptr, options uintptr) string
-	cImg2img                func(sd uintptr, options uintptr) string
+	cTxt2img                func(sd uintptr, options uintptr) *byte
+	cImg2img                func(sd uintptr, options uintptr) *byte
 
 	cSetStableDiffusionLogLevel   func(level string)
 	cGetStableDiffusionSystemInfo func() string
@@ -147,8 +148,8 @@ func NewCStableDiffusion(libraryPath string) (*CStableDiffusion, error) {
 		createStableDiffusion  func(nThreads int, vaeDecodeOnly bool, freeParamsImmediately bool, loraModelDir string, rngType string) uintptr
 		destroyStableDiffusion func(sd uintptr)
 		loadFromFile           func(sd uintptr, path string, schedule string)
-		txt2img                func(sd uintptr, options uintptr) string
-		img2img                func(sd uintptr, options uintptr) string
+		txt2img                func(sd uintptr, options uintptr) *byte
+		img2img                func(sd uintptr, options uintptr) *byte
 
 		setStableDiffusionLogLevel   func(level string)
 		getStableDiffusionSystemInfo func() string
@@ -265,10 +266,7 @@ func (c *CSDCtx) StableDiffusionTextToImage(prompt string, negativePrompt string
 	c.csd.cSetTxt2imgSeed(options, seed)
 	c.csd.setTxt2imgBatchCount(options, batchCount)
 	output := c.csd.cTxt2img(c.ctx, options)
-	data, err := base64.StdEncoding.DecodeString(output)
-	if err != nil {
-		return nil, err
-	}
+	data := unsafe.Slice(output, batchCount*height*width*3)
 	result := chunkBytes(data, batchCount)
 	return result, nil
 }
@@ -291,10 +289,7 @@ func (c *CSDCtx) StableDiffusionImageToImage(initImg []byte, prompt string, nega
 	c.csd.cSetImg2imgStrength(options, strength)
 	c.csd.cSetImg2imgSeed(options, seed)
 	output := c.csd.cImg2img(c.ctx, options)
-	data, err := base64.StdEncoding.DecodeString(output)
-	if err != nil {
-		return nil, err
-	}
+	data := unsafe.Slice(output, height*width*3)
 	return data, nil
 }
 

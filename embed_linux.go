@@ -5,8 +5,14 @@
 
 package sd
 
+import (
+	_ "embed" // Needed for go:embed
+)
+
 //go:embed deps/linux/libsd-abi.so
 var libStableDiffusion []byte
+
+var libName = "libstable-diffusion-*.so"
 
 func getDl(gpu bool) []byte {
 	if gpu {
