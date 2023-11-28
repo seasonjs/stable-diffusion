@@ -57,6 +57,7 @@ const (
 	cSetTxt2imgSampleMethod   = "set_txt2img_sample_method"
 	cSetTxt2imgSampleSteps    = "set_txt2img_sample_steps"
 	cSetTxt2imgSeed           = "set_txt2img_seed"
+	cSetTxt2imgBatchCount     = "set_txt2img_batch_count"
 
 	cNewSdImg2imgOptions      = "new_sd_img2img_options"
 	cSetImg2imgInitImg        = "set_img2img_init_img"
@@ -91,6 +92,7 @@ type CStableDiffusion struct {
 	cSetTxt2imgSampleMethod   func(options uintptr, sampleMethod string)
 	cSetTxt2imgSampleSteps    func(options uintptr, sampleSteps int)
 	cSetTxt2imgSeed           func(options uintptr, seed int64)
+	setTxt2imgBatchCount      func(options uintptr, batchCount int)
 
 	cNewSdImg2imgOptions      func() uintptr
 	cSetImg2imgInitImg        func(options uintptr, base64Str string)
@@ -129,6 +131,7 @@ func NewCStableDiffusion(libraryPath string) (*CStableDiffusion, error) {
 		setTxt2imgSampleMethod   func(options uintptr, sampleMethod string)
 		setTxt2imgSampleSteps    func(options uintptr, sampleSteps int)
 		setTxt2imgSeed           func(options uintptr, seed int64)
+		setTxt2imgBatchCount     func(options uintptr, batchCount int)
 
 		newSdImg2imgOptions      func() uintptr
 		setImg2imgInitImg        func(options uintptr, base64Str string)
@@ -160,6 +163,7 @@ func NewCStableDiffusion(libraryPath string) (*CStableDiffusion, error) {
 	purego.RegisterLibFunc(&setTxt2imgSampleMethod, libSd, cSetTxt2imgSampleMethod)
 	purego.RegisterLibFunc(&setTxt2imgSampleSteps, libSd, cSetTxt2imgSampleSteps)
 	purego.RegisterLibFunc(&setTxt2imgSeed, libSd, cSetTxt2imgSeed)
+	purego.RegisterLibFunc(&setTxt2imgBatchCount, libSd, cSetTxt2imgBatchCount)
 
 	purego.RegisterLibFunc(&newSdImg2imgOptions, libSd, cNewSdImg2imgOptions)
 	purego.RegisterLibFunc(&setImg2imgInitImg, libSd, cSetImg2imgInitImg)
@@ -194,6 +198,7 @@ func NewCStableDiffusion(libraryPath string) (*CStableDiffusion, error) {
 		setTxt2imgSampleMethod,
 		setTxt2imgSampleSteps,
 		setTxt2imgSeed,
+		setTxt2imgBatchCount,
 
 		newSdImg2imgOptions,
 		setImg2imgInitImg,
@@ -240,7 +245,10 @@ func (c *CSDCtx) StableDiffusionLoadFromFile(path string, schedule Schedule) {
 	c.csd.cLoadFromFile(c.ctx, path, string(schedule))
 }
 
-func (c *CSDCtx) StableDiffusionTextToImage(prompt string, negativePrompt string, cfgScale float32, width int, height int, sampleMethod SampleMethod, sampleSteps int, seed int64) ([]byte, error) {
+func (c *CSDCtx) StableDiffusionTextToImage(prompt string, negativePrompt string, cfgScale float32, width int, height int, sampleMethod SampleMethod, sampleSteps int, seed int64, batchCount int) ([][]byte, error) {
+	if batchCount < 1 {
+		return nil, errors.New("batchCount must be greater than 0")
+	}
 	if width <= 0 {
 		return nil, errors.New("width must be greater than 0")
 	}
@@ -255,12 +263,14 @@ func (c *CSDCtx) StableDiffusionTextToImage(prompt string, negativePrompt string
 	c.csd.cSetTxt2imgSampleMethod(options, string(sampleMethod))
 	c.csd.cSetTxt2imgSampleSteps(options, sampleSteps)
 	c.csd.cSetTxt2imgSeed(options, seed)
+	c.csd.setTxt2imgBatchCount(options, batchCount)
 	output := c.csd.cTxt2img(c.ctx, options)
 	data, err := base64.StdEncoding.DecodeString(output)
 	if err != nil {
 		return nil, err
 	}
-	return data, nil
+	result := chunkBytes(data, batchCount)
+	return result, nil
 }
 
 func (c *CSDCtx) StableDiffusionImageToImage(initImg []byte, prompt string, negativePrompt string, cfgScale float32, width int, height int, sampleMethod SampleMethod, sampleSteps int, strength float32, seed int64) ([]byte, error) {
@@ -294,4 +304,21 @@ func (c *CSDCtx) Close() {
 	}
 	c.ctx = 0
 
+}
+
+func chunkBytes(data []byte, chunks int) [][]byte {
+	length := len(data)
+	chunkSize := (length + chunks - 1) / chunks
+	result := make([][]byte, chunks)
+
+	for i := 0; i < chunks; i++ {
+		start := i * chunkSize
+		end := (i + 1) * chunkSize
+		if end > length {
+			end = length
+		}
+		result[i] = data[start:end:end]
+	}
+
+	return result
 }

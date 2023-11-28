@@ -1,6 +1,7 @@
 package sd
 
 import (
+	"io"
 	"os"
 	"testing"
 )
@@ -24,7 +25,8 @@ func TestNewStableDiffusionAutoModelPredict(t *testing.T) {
 	if err != nil {
 		t.Error(err)
 	}
-	err = model.Predict("a lovely cat, high quality", file)
+	writers := []io.Writer{file}
+	err = model.Predict("a lovely cat, high quality", writers)
 	if err != nil {
 		t.Error(err)
 	}

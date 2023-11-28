@@ -1,5 +1,5 @@
-#ifndef STABLE_DIFFUSION_CPP_STABLE_DIFFUSION_ABI_H
-#define STABLE_DIFFUSION_CPP_STABLE_DIFFUSION_ABI_H
+#ifndef STABLE_DIFFUSION_ABI_H
+#define STABLE_DIFFUSION_ABI_H
 
 
 #include <cstdint>
@@ -7,15 +7,15 @@
 #ifdef STABLE_DIFFUSION_SHARED
 #if defined(_WIN32) && !defined(__MINGW32__)
 #ifdef STABLE_DIFFUSION_BUILD
-#define STABLE_DIFFUSION_API __declspec(dllexport)
+    #define STABLE_DIFFUSION_API __declspec(dllexport)
 #else
-#define STABLE_DIFFUSION_API __declspec(dllimport)
+    #define STABLE_DIFFUSION_API __declspec(dllimport)
 #endif
 #else
-#define STABLE_DIFFUSION_API __attribute__((visibility("default")))
+    #define STABLE_DIFFUSION_API __attribute__((visibility("default")))
 #endif
 #else
-#define STABLE_DIFFUSION_API
+    #define STABLE_DIFFUSION_API
 #endif
 
 #ifdef __cplusplus
@@ -44,6 +44,9 @@ STABLE_DIFFUSION_API void set_txt2img_sample_method(sd_txt2img_options* opt, con
 STABLE_DIFFUSION_API void set_txt2img_sample_steps(sd_txt2img_options* opt, int sample_steps);
 
 STABLE_DIFFUSION_API void set_txt2img_seed(sd_txt2img_options* opt, int64_t seed);
+
+STABLE_DIFFUSION_API void set_txt2img_batch_count(sd_txt2img_options* opt, int batch_count);
+
 //================================================================================
 
 //==============================sd_img2img_options===============================
@@ -66,6 +69,7 @@ STABLE_DIFFUSION_API void set_img2img_sample_steps(sd_img2img_options* opt, int 
 STABLE_DIFFUSION_API void set_img2img_strength(sd_img2img_options* opt, float strength);
 
 STABLE_DIFFUSION_API void set_img2img_seed(sd_img2img_options* opt, int64_t seed);
+
 //================================================================================
 
 STABLE_DIFFUSION_API void* create_stable_diffusion(
@@ -79,7 +83,7 @@ STABLE_DIFFUSION_API void destroy_stable_diffusion(void* sd);
 
 STABLE_DIFFUSION_API bool load_from_file(void* sd, const char* file_path, const char* schedule);
 
-STABLE_DIFFUSION_API const char * txt2img(void* sd, const sd_txt2img_options* opt);
+STABLE_DIFFUSION_API const char* txt2img(void* sd, const sd_txt2img_options* opt);
 
 STABLE_DIFFUSION_API const char* img2img(void* sd, const sd_img2img_options* opt);
 
@@ -93,4 +97,4 @@ STABLE_DIFFUSION_API void free_buffer(const char* buffer);
 }
 #endif
 
-#endif //STABLE_DIFFUSION_CPP_STABLE_DIFFUSION_C_H
+#endif //STABLE_DIFFUSION_ABI_H
