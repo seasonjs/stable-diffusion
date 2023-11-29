@@ -4,8 +4,6 @@
 package sd
 
 import (
-	"encoding/base64"
-	"errors"
 	"github.com/ebitengine/purego"
 	"unsafe"
 )
@@ -50,270 +48,253 @@ const (
 )
 
 const (
-	cNewSdTxt2imgOptions      = "new_sd_txt2img_options"
-	cSetTxt2imgPrompt         = "set_txt2img_prompt"
-	cSetTxt2imgNegativePrompt = "set_txt2img_negative_prompt"
-	cSetTxt2imgCfgScale       = "set_txt2img_cfg_scale"
-	cSetTxt2imgSize           = "set_txt2img_size"
-	cSetTxt2imgSampleMethod   = "set_txt2img_sample_method"
-	cSetTxt2imgSampleSteps    = "set_txt2img_sample_steps"
-	cSetTxt2imgSeed           = "set_txt2img_seed"
-	cSetTxt2imgBatchCount     = "set_txt2img_batch_count"
+	cStableDiffusionFullDefaultParamsRef        = "stable_diffusion_full_default_params_ref"
+	cStableDiffusionFullParamsSetNegativePrompt = "stable_diffusion_full_params_set_negative_prompt"
+	cStableDiffusionFullParamsSetCfgScale       = "stable_diffusion_full_params_set_cfg_scale"
+	cStableDiffusionFullParamsSetWidth          = "stable_diffusion_full_params_set_width"
+	cStableDiffusionFullParamsSetHeight         = "stable_diffusion_full_params_set_height"
+	cStableDiffusionFullParamsSetSampleMethod   = "stable_diffusion_full_params_set_sample_method"
+	cStableDiffusionFullParamsSetSampleSteps    = "stable_diffusion_full_params_set_sample_steps"
+	cStableDiffusionFullParamsSetSeed           = "stable_diffusion_full_params_set_seed"
+	cStableDiffusionFullParamsSetBatchCount     = "stable_diffusion_full_params_set_batch_count"
+	cStableDiffusionFullParamsSetStrength       = "stable_diffusion_full_params_set_strength"
 
-	cNewSdImg2imgOptions      = "new_sd_img2img_options"
-	cSetImg2imgInitImg        = "set_img2img_init_img"
-	cSetImg2imgPrompt         = "set_img2img_prompt"
-	cSetImg2imgNegativePrompt = "set_img2img_negative_prompt"
-	cSetImg2imgCfgScale       = "set_img2img_cfg_scale"
-	cSetImg2imgSize           = "set_img2img_size"
-	cSetImg2imgSampleMethod   = "set_img2img_sample_method"
-	cSetImg2imgSampleSteps    = "set_img2img_sample_steps"
-	cSetImg2imgStrength       = "set_img2img_strength"
-	cSetImg2imgSeed           = "set_img2img_seed"
-
-	cCreateStableDiffusion  = "create_stable_diffusion"
-	cDestroyStableDiffusion = "destroy_stable_diffusion"
-	cLoadFromFile           = "load_from_file"
-	cTxt2img                = "txt2img"
-	cImg2img                = "img2img"
-
-	cSetStableDiffusionLogLevel   = "set_stable_diffusion_log_level"
-	cGetStableDiffusionSystemInfo = "get_stable_diffusion_system_info"
-	cFreeBuffer                   = "free_buffer"
+	cStableDiffusionInit              = "stable_diffusion_init"
+	cStableDiffusionLoadFromFile      = "stable_diffusion_load_from_file"
+	cStableDiffusionPredictImage      = "stable_diffusion_predict_image"
+	cStableDiffusionImagePredictImage = "stable_diffusion_image_predict_image"
+	cStableDiffusionSetLogLevel       = "stable_diffusion_set_log_level"
+	cStableDiffusionGetSystemInfo     = "stable_diffusion_get_system_info"
+	cStableDiffusionFree              = "stable_diffusion_free"
+	cStableDiffusionFreeBuffer        = "stable_diffusion_free_buffer"
+	cStableDiffusionFreeFullParams    = "stable_diffusion_free_full_params"
 )
 
-type CStableDiffusion struct {
-	libSd uintptr
-
-	cNewSdTxt2imgOptions      func() uintptr
-	cSetTxt2imgPrompt         func(options uintptr, prompt string)
-	cSetTxt2imgNegativePrompt func(options uintptr, negativePrompt string)
-	cSetTxt2imgCfgScale       func(options uintptr, scale float32)
-	cSetTxt2imgSize           func(options uintptr, width, height int)
-	cSetTxt2imgSampleMethod   func(options uintptr, sampleMethod string)
-	cSetTxt2imgSampleSteps    func(options uintptr, sampleSteps int)
-	cSetTxt2imgSeed           func(options uintptr, seed int64)
-	setTxt2imgBatchCount      func(options uintptr, batchCount int)
-
-	cNewSdImg2imgOptions      func() uintptr
-	cSetImg2imgInitImg        func(options uintptr, base64Str string)
-	cSetImg2imgPrompt         func(options uintptr, prompt string)
-	cSetImg2imgNegativePrompt func(options uintptr, negativePrompt string)
-	cSetImg2imgCfgScale       func(options uintptr, cfgScale float32)
-	cSetImg2imgSize           func(options uintptr, width, height int)
-	cSetImg2imgSampleMethod   func(options uintptr, sampleMethod string)
-	cSetImg2imgSampleSteps    func(options uintptr, sampleSteps int)
-	cSetImg2imgStrength       func(options uintptr, strength float32)
-	cSetImg2imgSeed           func(options uintptr, seed int64)
-
-	cCreateStableDiffusion  func(nThreads int, vaeDecodeOnly bool, freeParamsImmediately bool, loraModelDir string, rngType string) uintptr
-	cDestroyStableDiffusion func(sd uintptr)
-	cLoadFromFile           func(sd uintptr, path string, schedule string)
-	cTxt2img                func(sd uintptr, options uintptr) *byte
-	cImg2img                func(sd uintptr, options uintptr) *byte
-
-	cSetStableDiffusionLogLevel   func(level string)
-	cGetStableDiffusionSystemInfo func() string
-
-	cFreeBuffer func(buffer uintptr)
+type StableDiffusionFullParams struct {
+	params         uintptr
+	negativePrompt string
+	cfgScale       float32
+	width          int
+	height         int
+	sampleMethod   SampleMethod
+	sampleSteps    int
+	seed           int64
+	batchCount     int
+	strength       float32
 }
 
-func NewCStableDiffusion(libraryPath string) (*CStableDiffusion, error) {
+type StableDiffusionCtx struct {
+	ctx uintptr
+}
+
+type CStableDiffusion interface {
+	StableDiffusionFullDefaultParamsRef() *StableDiffusionFullParams
+	StableDiffusionFullParamsSetNegativePrompt(params *StableDiffusionFullParams, negativePrompt string)
+	StableDiffusionFullParamsSetCfgScale(params *StableDiffusionFullParams, cfgScale float32)
+	StableDiffusionFullParamsSetWidth(params *StableDiffusionFullParams, width int)
+	StableDiffusionFullParamsSetHeight(params *StableDiffusionFullParams, height int)
+	StableDiffusionFullParamsSetSampleMethod(params *StableDiffusionFullParams, sampleMethod SampleMethod)
+	StableDiffusionFullParamsSetSampleSteps(params *StableDiffusionFullParams, sampleSteps int)
+	StableDiffusionFullParamsSetSeed(params *StableDiffusionFullParams, seed int64)
+	StableDiffusionFullParamsSetBatchCount(params *StableDiffusionFullParams, batchCount int)
+	StableDiffusionFullParamsSetStrength(params *StableDiffusionFullParams, strength float32)
+
+	StableDiffusionInit(nThreads int, vaeDecodeOnly bool, freeParamsImmediately bool, loraModelDir string, rngType RNGType) *StableDiffusionCtx
+	StableDiffusionLoadFromFile(ctx *StableDiffusionCtx, filePath string, schedule Schedule)
+	StableDiffusionPredictImage(ctx *StableDiffusionCtx, params *StableDiffusionFullParams, prompt string) []byte
+	StableDiffusionImagePredictImage(ctx *StableDiffusionCtx, params *StableDiffusionFullParams, initImage []byte, prompt string) []byte
+	StableDiffusionSetLogLevel(level SDLogLevel)
+	StableDiffusionGetSystemInfo() string
+	StableDiffusionFree(ctx *StableDiffusionCtx)
+	StableDiffusionFreeBuffer(buffer uintptr)
+	StableDiffusionFreeFullParams(params *StableDiffusionFullParams)
+}
+
+type CStableDiffusionImpl struct {
+	libSd uintptr
+
+	cStableDiffusionFullDefaultParamsRef        func() uintptr
+	cStableDiffusionFullParamsSetNegativePrompt func(params uintptr, negative_prompt string)
+	cStableDiffusionFullParamsSetCfgScale       func(params uintptr, cfg_scale float32)
+	cStableDiffusionFullParamsSetWidth          func(params uintptr, width int)
+	cStableDiffusionFullParamsSetHeight         func(params uintptr, height int)
+	cStableDiffusionFullParamsSetSampleMethod   func(params uintptr, sampleMethod string)
+	cStableDiffusionFullParamsSetSampleSteps    func(params uintptr, sampleSteps int)
+	cStableDiffusionFullParamsSetSeed           func(params uintptr, seed int64)
+	cStableDiffusionFullParamsSetBatchCount     func(params uintptr, batchCount int)
+	cStableDiffusionFullParamsSetStrength       func(params uintptr, strength float32)
+
+	cStableDiffusionInit              func(nThreads int, vaeDecodeOnly bool, freeParamsImmediately bool, loraModelDir string, rngType string) uintptr
+	cStableDiffusionLoadFromFile      func(ctx uintptr, filePath string, schedule string)
+	cStableDiffusionPredictImage      func(ctx uintptr, params uintptr, prompt string) *byte
+	cStableDiffusionImagePredictImage func(ctx uintptr, params uintptr, initImage *byte, prompt string) *byte
+	cStableDiffusionSetLogLevel       func(level string)
+	cStableDiffusionGetSystemInfo     func() string
+	cStableDiffusionFree              func(options uintptr)
+	cStableDiffusionFreeBuffer        func(options uintptr)
+	cStableDiffusionFreeFullParams    func(options uintptr)
+}
+
+func NewCStableDiffusion(libraryPath string) (CStableDiffusion, error) {
 	libSd, err := openLibrary(libraryPath)
 	if err != nil {
 		return nil, err
 	}
 	var (
-		newSdTxt2imgOptions      func() uintptr
-		setTxt2imgPrompt         func(options uintptr, prompt string)
-		setTxt2imgNegativePrompt func(options uintptr, negativePrompt string)
-		setTxt2imgCfgScale       func(options uintptr, cfgScale float32)
-		setTxt2imgSize           func(options uintptr, width, height int)
-		setTxt2imgSampleMethod   func(options uintptr, sampleMethod string)
-		setTxt2imgSampleSteps    func(options uintptr, sampleSteps int)
-		setTxt2imgSeed           func(options uintptr, seed int64)
-		setTxt2imgBatchCount     func(options uintptr, batchCount int)
+		stableDiffusionFullDefaultParamsRef        func() uintptr
+		stableDiffusionFullParamsSetNegativePrompt func(params uintptr, negative_prompt string)
+		stableDiffusionFullParamsSetCfgScale       func(params uintptr, cfg_scale float32)
+		stableDiffusionFullParamsSetWidth          func(params uintptr, width int)
+		stableDiffusionFullParamsSetHeight         func(params uintptr, height int)
+		stableDiffusionFullParamsSetSampleMethod   func(params uintptr, sampleMethod string)
+		stableDiffusionFullParamsSetSampleSteps    func(params uintptr, sampleSteps int)
+		stableDiffusionFullParamsSetSeed           func(params uintptr, seed int64)
+		stableDiffusionFullParamsSetBatchCount     func(params uintptr, batchCount int)
+		stableDiffusionFullParamsSetStrength       func(params uintptr, strength float32)
 
-		newSdImg2imgOptions      func() uintptr
-		setImg2imgInitImg        func(options uintptr, base64Str string)
-		setImg2imgPrompt         func(options uintptr, prompt string)
-		setImg2imgNegativePrompt func(options uintptr, negativePrompt string)
-		setImg2imgCfgScale       func(options uintptr, cfgScale float32)
-		setImg2imgSize           func(options uintptr, width, height int)
-		setImg2imgSampleMethod   func(options uintptr, sampleMethod string)
-		setImg2imgSampleSteps    func(options uintptr, sampleSteps int)
-		setImg2imgStrength       func(options uintptr, strength float32)
-		setImg2imgSeed           func(options uintptr, seed int64)
-
-		createStableDiffusion  func(nThreads int, vaeDecodeOnly bool, freeParamsImmediately bool, loraModelDir string, rngType string) uintptr
-		destroyStableDiffusion func(sd uintptr)
-		loadFromFile           func(sd uintptr, path string, schedule string)
-		txt2img                func(sd uintptr, options uintptr) *byte
-		img2img                func(sd uintptr, options uintptr) *byte
-
-		setStableDiffusionLogLevel   func(level string)
-		getStableDiffusionSystemInfo func() string
-
-		freeBuffer func(buffer uintptr)
+		stableDiffusionInit              func(nThreads int, vaeDecodeOnly bool, freeParamsImmediately bool, loraModelDir string, rngType string) uintptr
+		stableDiffusionLoadFromFile      func(ctx uintptr, filePath string, schedule string)
+		stableDiffusionPredictImage      func(ctx uintptr, params uintptr, prompt string) *byte
+		stableDiffusionImagePredictImage func(ctx uintptr, params uintptr, initImage *byte, prompt string) *byte
+		stableDiffusionSetLogLevel       func(level string)
+		stableDiffusionGetSystemInfo     func() string
+		stableDiffusionFree              func(options uintptr)
+		stableDiffusionFreeBuffer        func(options uintptr)
+		stableDiffusionFreeFullParams    func(options uintptr)
 	)
-	purego.RegisterLibFunc(&newSdTxt2imgOptions, libSd, cNewSdTxt2imgOptions)
-	purego.RegisterLibFunc(&setTxt2imgPrompt, libSd, cSetTxt2imgPrompt)
-	purego.RegisterLibFunc(&setTxt2imgNegativePrompt, libSd, cSetTxt2imgNegativePrompt)
-	purego.RegisterLibFunc(&setTxt2imgCfgScale, libSd, cSetTxt2imgCfgScale)
-	purego.RegisterLibFunc(&setTxt2imgSize, libSd, cSetTxt2imgSize)
-	purego.RegisterLibFunc(&setTxt2imgSampleMethod, libSd, cSetTxt2imgSampleMethod)
-	purego.RegisterLibFunc(&setTxt2imgSampleSteps, libSd, cSetTxt2imgSampleSteps)
-	purego.RegisterLibFunc(&setTxt2imgSeed, libSd, cSetTxt2imgSeed)
-	purego.RegisterLibFunc(&setTxt2imgBatchCount, libSd, cSetTxt2imgBatchCount)
+	purego.RegisterLibFunc(&stableDiffusionFullDefaultParamsRef, libSd, cStableDiffusionFullDefaultParamsRef)
+	purego.RegisterLibFunc(&stableDiffusionFullParamsSetNegativePrompt, libSd, cStableDiffusionFullParamsSetNegativePrompt)
+	purego.RegisterLibFunc(&stableDiffusionFullParamsSetCfgScale, libSd, cStableDiffusionFullParamsSetCfgScale)
+	purego.RegisterLibFunc(&stableDiffusionFullParamsSetWidth, libSd, cStableDiffusionFullParamsSetWidth)
+	purego.RegisterLibFunc(&stableDiffusionFullParamsSetHeight, libSd, cStableDiffusionFullParamsSetHeight)
+	purego.RegisterLibFunc(&stableDiffusionFullParamsSetSampleMethod, libSd, cStableDiffusionFullParamsSetSampleMethod)
+	purego.RegisterLibFunc(&stableDiffusionFullParamsSetSampleSteps, libSd, cStableDiffusionFullParamsSetSampleSteps)
+	purego.RegisterLibFunc(&stableDiffusionFullParamsSetSeed, libSd, cStableDiffusionFullParamsSetSeed)
+	purego.RegisterLibFunc(&stableDiffusionFullParamsSetBatchCount, libSd, cStableDiffusionFullParamsSetBatchCount)
+	purego.RegisterLibFunc(&stableDiffusionFullParamsSetStrength, libSd, cStableDiffusionFullParamsSetStrength)
 
-	purego.RegisterLibFunc(&newSdImg2imgOptions, libSd, cNewSdImg2imgOptions)
-	purego.RegisterLibFunc(&setImg2imgInitImg, libSd, cSetImg2imgInitImg)
-	purego.RegisterLibFunc(&setImg2imgPrompt, libSd, cSetImg2imgPrompt)
-	purego.RegisterLibFunc(&setImg2imgNegativePrompt, libSd, cSetImg2imgNegativePrompt)
-	purego.RegisterLibFunc(&setImg2imgCfgScale, libSd, cSetImg2imgCfgScale)
-	purego.RegisterLibFunc(&setImg2imgSize, libSd, cSetImg2imgSize)
-	purego.RegisterLibFunc(&setImg2imgSampleMethod, libSd, cSetImg2imgSampleMethod)
-	purego.RegisterLibFunc(&setImg2imgSampleSteps, libSd, cSetImg2imgSampleSteps)
-	purego.RegisterLibFunc(&setImg2imgStrength, libSd, cSetImg2imgStrength)
-	purego.RegisterLibFunc(&setImg2imgSeed, libSd, cSetImg2imgSeed)
+	purego.RegisterLibFunc(&stableDiffusionInit, libSd, cStableDiffusionInit)
+	purego.RegisterLibFunc(&stableDiffusionLoadFromFile, libSd, cStableDiffusionLoadFromFile)
+	purego.RegisterLibFunc(&stableDiffusionPredictImage, libSd, cStableDiffusionPredictImage)
+	purego.RegisterLibFunc(&stableDiffusionImagePredictImage, libSd, cStableDiffusionImagePredictImage)
+	purego.RegisterLibFunc(&stableDiffusionSetLogLevel, libSd, cStableDiffusionSetLogLevel)
+	purego.RegisterLibFunc(&stableDiffusionGetSystemInfo, libSd, cStableDiffusionGetSystemInfo)
+	purego.RegisterLibFunc(&stableDiffusionFree, libSd, cStableDiffusionFree)
+	purego.RegisterLibFunc(&stableDiffusionFreeBuffer, libSd, cStableDiffusionFreeBuffer)
+	purego.RegisterLibFunc(&stableDiffusionFreeFullParams, libSd, cStableDiffusionFreeFullParams)
 
-	purego.RegisterLibFunc(&createStableDiffusion, libSd, cCreateStableDiffusion)
-	purego.RegisterLibFunc(&destroyStableDiffusion, libSd, cDestroyStableDiffusion)
-	purego.RegisterLibFunc(&loadFromFile, libSd, cLoadFromFile)
-	purego.RegisterLibFunc(&txt2img, libSd, cTxt2img)
-	purego.RegisterLibFunc(&img2img, libSd, cImg2img)
-
-	purego.RegisterLibFunc(&setStableDiffusionLogLevel, libSd, cSetStableDiffusionLogLevel)
-	purego.RegisterLibFunc(&getStableDiffusionSystemInfo, libSd, cGetStableDiffusionSystemInfo)
-
-	purego.RegisterLibFunc(&freeBuffer, libSd, cFreeBuffer)
-
-	return &CStableDiffusion{
+	return &CStableDiffusionImpl{
 		libSd,
+		stableDiffusionFullDefaultParamsRef,
+		stableDiffusionFullParamsSetNegativePrompt,
+		stableDiffusionFullParamsSetCfgScale,
+		stableDiffusionFullParamsSetWidth,
+		stableDiffusionFullParamsSetHeight,
+		stableDiffusionFullParamsSetSampleMethod,
+		stableDiffusionFullParamsSetSampleSteps,
+		stableDiffusionFullParamsSetSeed,
+		stableDiffusionFullParamsSetBatchCount,
+		stableDiffusionFullParamsSetStrength,
 
-		newSdTxt2imgOptions,
-		setTxt2imgPrompt,
-		setTxt2imgNegativePrompt,
-		setTxt2imgCfgScale,
-		setTxt2imgSize,
-		setTxt2imgSampleMethod,
-		setTxt2imgSampleSteps,
-		setTxt2imgSeed,
-		setTxt2imgBatchCount,
-
-		newSdImg2imgOptions,
-		setImg2imgInitImg,
-		setImg2imgPrompt,
-		setImg2imgNegativePrompt,
-		setImg2imgCfgScale,
-		setImg2imgSize,
-		setImg2imgSampleMethod,
-		setImg2imgSampleSteps,
-		setImg2imgStrength,
-		setImg2imgSeed,
-
-		createStableDiffusion,
-		destroyStableDiffusion,
-		loadFromFile,
-		txt2img,
-		img2img,
-
-		setStableDiffusionLogLevel,
-		getStableDiffusionSystemInfo,
-		freeBuffer,
+		stableDiffusionInit,
+		stableDiffusionLoadFromFile,
+		stableDiffusionPredictImage,
+		stableDiffusionImagePredictImage,
+		stableDiffusionSetLogLevel,
+		stableDiffusionGetSystemInfo,
+		stableDiffusionFree,
+		stableDiffusionFreeBuffer,
+		stableDiffusionFreeFullParams,
 	}, nil
 }
 
-func (cSD *CStableDiffusion) NewStableDiffusionCtx(nThreads int, vaeDecodeOnly bool, freeParamsImmediately bool, loraModelDir string, rngType RNGType) *CSDCtx {
-	ctx := cSD.cCreateStableDiffusion(nThreads, vaeDecodeOnly, freeParamsImmediately, loraModelDir, string(rngType))
-	return &CSDCtx{ctx: ctx, csd: cSD}
-}
-
-func (cSD *CStableDiffusion) StableDiffusionSetLogLevel(level SDLogLevel) {
-	cSD.cSetStableDiffusionLogLevel(string(level))
-}
-
-func (cSD *CStableDiffusion) StableDiffusionGetSystemInfo() string {
-	return cSD.cGetStableDiffusionSystemInfo()
-}
-
-type CSDCtx struct {
-	csd *CStableDiffusion
-	ctx uintptr
-}
-
-func (c *CSDCtx) StableDiffusionLoadFromFile(path string, schedule Schedule) {
-	c.csd.cLoadFromFile(c.ctx, path, string(schedule))
-}
-
-func (c *CSDCtx) StableDiffusionTextToImage(prompt string, negativePrompt string, cfgScale float32, width int, height int, sampleMethod SampleMethod, sampleSteps int, seed int64, batchCount int) ([][]byte, error) {
-	if batchCount < 1 {
-		return nil, errors.New("batchCount must be greater than 0")
+func (c *CStableDiffusionImpl) StableDiffusionFullDefaultParamsRef() *StableDiffusionFullParams {
+	return &StableDiffusionFullParams{
+		params: c.cStableDiffusionFullDefaultParamsRef(),
 	}
-	if width <= 0 {
-		return nil, errors.New("width must be greater than 0")
-	}
-	if height <= 0 {
-		return nil, errors.New("height must be greater than 0")
-	}
-	options := c.csd.cNewSdImg2imgOptions()
-	c.csd.cSetTxt2imgPrompt(options, prompt)
-	c.csd.cSetTxt2imgNegativePrompt(options, negativePrompt)
-	c.csd.cSetTxt2imgCfgScale(options, cfgScale)
-	c.csd.cSetTxt2imgSize(options, width, height)
-	c.csd.cSetTxt2imgSampleMethod(options, string(sampleMethod))
-	c.csd.cSetTxt2imgSampleSteps(options, sampleSteps)
-	c.csd.cSetTxt2imgSeed(options, seed)
-	c.csd.setTxt2imgBatchCount(options, batchCount)
-	output := c.csd.cTxt2img(c.ctx, options)
-	data := unsafe.Slice(output, batchCount*height*width*3)
-	result := chunkBytes(data, batchCount)
-	return result, nil
 }
 
-func (c *CSDCtx) StableDiffusionImageToImage(initImg []byte, prompt string, negativePrompt string, cfgScale float32, width int, height int, sampleMethod SampleMethod, sampleSteps int, strength float32, seed int64) ([]byte, error) {
-	if width <= 0 || width%64 != 0 {
-		return nil, errors.New("width must be greater than 0 and must be a multiple of 64")
-	}
-	if height <= 0 || height%64 != 0 {
-		return nil, errors.New("height must be greater than 0 and must be a multiple of 64")
-	}
-	options := c.csd.cNewSdImg2imgOptions()
-	c.csd.cSetImg2imgInitImg(options, base64.StdEncoding.EncodeToString(initImg))
-	c.csd.cSetImg2imgPrompt(options, prompt)
-	c.csd.cSetImg2imgNegativePrompt(options, negativePrompt)
-	c.csd.cSetImg2imgCfgScale(options, cfgScale)
-	c.csd.cSetImg2imgSize(options, width, height)
-	c.csd.cSetImg2imgSampleMethod(options, string(sampleMethod))
-	c.csd.cSetImg2imgSampleSteps(options, sampleSteps)
-	c.csd.cSetImg2imgStrength(options, strength)
-	c.csd.cSetImg2imgSeed(options, seed)
-	output := c.csd.cImg2img(c.ctx, options)
-	data := unsafe.Slice(output, height*width*3)
-	return data, nil
+func (c *CStableDiffusionImpl) StableDiffusionFullParamsSetNegativePrompt(params *StableDiffusionFullParams, negativePrompt string) {
+	c.cStableDiffusionFullParamsSetNegativePrompt(params.params, negativePrompt)
+	params.negativePrompt = negativePrompt
 }
 
-func (c *CSDCtx) Close() {
-	if c.ctx != 0 {
-		c.csd.cDestroyStableDiffusion(c.ctx)
-	}
-	c.ctx = 0
-
+func (c *CStableDiffusionImpl) StableDiffusionFullParamsSetCfgScale(params *StableDiffusionFullParams, cfgScale float32) {
+	c.cStableDiffusionFullParamsSetCfgScale(params.params, cfgScale)
+	params.cfgScale = cfgScale
 }
 
-func chunkBytes(data []byte, chunks int) [][]byte {
-	length := len(data)
-	chunkSize := (length + chunks - 1) / chunks
-	result := make([][]byte, chunks)
+func (c *CStableDiffusionImpl) StableDiffusionFullParamsSetWidth(params *StableDiffusionFullParams, width int) {
+	c.cStableDiffusionFullParamsSetWidth(params.params, width)
+	params.width = width
+}
 
-	for i := 0; i < chunks; i++ {
-		start := i * chunkSize
-		end := (i + 1) * chunkSize
-		if end > length {
-			end = length
-		}
-		result[i] = data[start:end:end]
+func (c *CStableDiffusionImpl) StableDiffusionFullParamsSetHeight(params *StableDiffusionFullParams, height int) {
+	c.cStableDiffusionFullParamsSetHeight(params.params, height)
+	params.height = height
+}
+
+func (c *CStableDiffusionImpl) StableDiffusionFullParamsSetSampleMethod(params *StableDiffusionFullParams, sampleMethod SampleMethod) {
+	c.cStableDiffusionFullParamsSetSampleMethod(params.params, string(sampleMethod))
+	params.sampleMethod = sampleMethod
+}
+
+func (c *CStableDiffusionImpl) StableDiffusionFullParamsSetSampleSteps(params *StableDiffusionFullParams, sampleSteps int) {
+	c.cStableDiffusionFullParamsSetSampleSteps(params.params, sampleSteps)
+	params.sampleSteps = sampleSteps
+}
+
+func (c *CStableDiffusionImpl) StableDiffusionFullParamsSetSeed(params *StableDiffusionFullParams, seed int64) {
+	c.cStableDiffusionFullParamsSetSeed(params.params, seed)
+	params.seed = seed
+}
+
+func (c *CStableDiffusionImpl) StableDiffusionFullParamsSetBatchCount(params *StableDiffusionFullParams, batchCount int) {
+	c.cStableDiffusionFullParamsSetBatchCount(params.params, batchCount)
+	params.batchCount = batchCount
+}
+
+func (c *CStableDiffusionImpl) StableDiffusionFullParamsSetStrength(params *StableDiffusionFullParams, strength float32) {
+	c.cStableDiffusionFullParamsSetStrength(params.params, strength)
+	params.strength = strength
+}
+
+func (c *CStableDiffusionImpl) StableDiffusionInit(nThreads int, vaeDecodeOnly bool, freeParamsImmediately bool, loraModelDir string, rngType RNGType) *StableDiffusionCtx {
+	return &StableDiffusionCtx{
+		ctx: c.cStableDiffusionInit(nThreads, vaeDecodeOnly, freeParamsImmediately, loraModelDir, string(rngType)),
 	}
+}
 
-	return result
+func (c *CStableDiffusionImpl) StableDiffusionLoadFromFile(ctx *StableDiffusionCtx, filePath string, schedule Schedule) {
+	c.cStableDiffusionLoadFromFile(ctx.ctx, filePath, string(schedule))
+}
+
+func (c *CStableDiffusionImpl) StableDiffusionPredictImage(ctx *StableDiffusionCtx, params *StableDiffusionFullParams, prompt string) []byte {
+	data := c.cStableDiffusionPredictImage(ctx.ctx, params.params, prompt)
+	return unsafe.Slice(data, params.width*params.height*3*params.batchCount)
+}
+
+func (c *CStableDiffusionImpl) StableDiffusionImagePredictImage(ctx *StableDiffusionCtx, params *StableDiffusionFullParams, initImage []byte, prompt string) []byte {
+	data := c.cStableDiffusionImagePredictImage(ctx.ctx, params.params, &initImage[0], prompt)
+	return unsafe.Slice(data, params.width*params.height*3)
+}
+
+func (c *CStableDiffusionImpl) StableDiffusionSetLogLevel(level SDLogLevel) {
+	c.cStableDiffusionSetLogLevel(string(level))
+}
+
+func (c *CStableDiffusionImpl) StableDiffusionGetSystemInfo() string {
+	return c.cStableDiffusionGetSystemInfo()
+}
+
+func (c *CStableDiffusionImpl) StableDiffusionFree(ctx *StableDiffusionCtx) {
+	c.cStableDiffusionFree(ctx.ctx)
+}
+
+func (c *CStableDiffusionImpl) StableDiffusionFreeBuffer(buffer uintptr) {
+	c.cStableDiffusionFreeBuffer(buffer)
+}
+
+func (c *CStableDiffusionImpl) StableDiffusionFreeFullParams(params *StableDiffusionFullParams) {
+	c.cStableDiffusionFreeFullParams(params.params)
 }

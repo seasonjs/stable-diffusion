@@ -31,7 +31,7 @@ See `deps` folder for dylib compatibility, push request is welcome.
 
 #### The Source of dynamic Libraries
 These dynamic libraries come from [stable-diffusion.cpp-build release](https://github.com/seasonjs/stable-diffusion.cpp-build/releases), The dynamic library version can be obtained by viewing [stable-diffusion.version file](./deps/stable-diffusion.version)
-Anyone can check the consistency of the file by checksum the md5 of the file.
+Anyone can check the consistency of the file by checksum ( MD5 ).
 
 #### The Security Of Dynamic Libraries
 All I can say is that the creation of the dynamic library is public and does not contain any subjective malicious logic.
@@ -172,7 +172,12 @@ See detail at [stable-diffusion-doc](https://pkg.go.dev/github.com/seasonjs/stab
 * [purego](https://github.com/ebitengine/purego)
 
 ## Successful Examples
-
+<span>
+  <img src="./assets/love_cat0.png" width="128x">
+</span>
+<span>
+  <img src="./assets/love_cat1.png" width="128x">
+</span>
 <span>
   <img src="./assets/love_cat2.png" width="128x">
 </span>
@@ -183,8 +188,14 @@ See detail at [stable-diffusion-doc](https://pkg.go.dev/github.com/seasonjs/stab
   <img src="./assets/love_cat4.png" width="128x">
 </span>
 <span>
-  <img src="./assets/love_cat6.png" width="128x">
+  <img src="./assets/love_cat5.png" width="128x">
 </span>
+
+[//]: # (<span>)
+
+[//]: # (  <img src="./assets/love_cat6.png" width="128x">)
+
+[//]: # (</span>)
 
 ## License
 

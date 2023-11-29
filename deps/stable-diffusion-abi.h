@@ -1,8 +1,7 @@
 #ifndef STABLE_DIFFUSION_ABI_H
 #define STABLE_DIFFUSION_ABI_H
 
-
-#include <cstdint>
+#include "stable-diffusion.h"
 
 #ifdef STABLE_DIFFUSION_SHARED
 #if defined(_WIN32) && !defined(__MINGW32__)
@@ -12,7 +11,7 @@
     #define STABLE_DIFFUSION_API __declspec(dllimport)
 #endif
 #else
-    #define STABLE_DIFFUSION_API __attribute__((visibility("default")))
+#define STABLE_DIFFUSION_API __attribute__((visibility("default")))
 #endif
 #else
     #define STABLE_DIFFUSION_API
@@ -22,76 +21,109 @@
 extern "C" {
 #endif
 
-struct sd_txt2img_options;
+struct stable_diffusion_ctx;
 
-struct sd_img2img_options;
+struct stable_diffusion_full_params {
+    std::string negative_prompt;
+    float cfg_scale;
+    int width;
+    int height;
+    SampleMethod sample_method;
+    int sample_steps;
+    int64_t seed;
+    int batch_count;
+    float strength;
+};
 
 // These methods are used in binding in other languages,golang, python,etc.
+// Use setter to handle purego max args limit less than 9
+// see https://github.com/ebitengine/purego/pull/7
+//     https://github.com/ebitengine/purego/blob/4db9e9e813d0f24f3ccc85a843d2316d2d2a70c6/func.go#L104
+STABLE_DIFFUSION_API struct stable_diffusion_full_params* stable_diffusion_full_default_parmas_ref();
 
-//==============================sd_txt2img_options===============================
-STABLE_DIFFUSION_API sd_txt2img_options* new_sd_txt2img_options();
+STABLE_DIFFUSION_API void stable_diffusion_full_params_set_negative_prompt(
+    struct stable_diffusion_full_params* params,
+    const char* negative_prompt
+);
 
-STABLE_DIFFUSION_API void set_txt2img_prompt(sd_txt2img_options* opt, const char* prompt);
+STABLE_DIFFUSION_API void stable_diffusion_full_params_set_cfg_scale(
+    struct stable_diffusion_full_params* params,
+    float cfg_scale
+);
 
-STABLE_DIFFUSION_API void set_txt2img_negative_prompt(sd_txt2img_options* opt, const char* negative_prompt);
+STABLE_DIFFUSION_API void stable_diffusion_full_params_set_width(
+    struct stable_diffusion_full_params* params,
+    int width
+);
 
-STABLE_DIFFUSION_API void set_txt2img_cfg_scale(sd_txt2img_options* opt, float cfg_scale);
+STABLE_DIFFUSION_API void stable_diffusion_full_params_set_height(
+    struct stable_diffusion_full_params* params,
+    int height
+);
 
-STABLE_DIFFUSION_API void set_txt2img_size(sd_txt2img_options* opt, int width, int height);
+STABLE_DIFFUSION_API void stable_diffusion_full_params_set_sample_method(
+    struct stable_diffusion_full_params* params,
+    const char* sample_method
+);
 
-STABLE_DIFFUSION_API void set_txt2img_sample_method(sd_txt2img_options* opt, const char* sample_method);
+STABLE_DIFFUSION_API void stable_diffusion_full_params_set_sample_steps(
+    struct stable_diffusion_full_params* params,
+    int sample_steps
+);
 
-STABLE_DIFFUSION_API void set_txt2img_sample_steps(sd_txt2img_options* opt, int sample_steps);
 
-STABLE_DIFFUSION_API void set_txt2img_seed(sd_txt2img_options* opt, int64_t seed);
+STABLE_DIFFUSION_API void stable_diffusion_full_params_set_seed(
+    struct stable_diffusion_full_params* params,
+    int64_t seed
+);
 
-STABLE_DIFFUSION_API void set_txt2img_batch_count(sd_txt2img_options* opt, int batch_count);
+STABLE_DIFFUSION_API void stable_diffusion_full_params_set_batch_count(
+    struct stable_diffusion_full_params* params,
+    int batch_count
+);
 
-//================================================================================
+STABLE_DIFFUSION_API void stable_diffusion_full_params_set_strength(
+    struct stable_diffusion_full_params* params,
+    float strength
+);
 
-//==============================sd_img2img_options===============================
-STABLE_DIFFUSION_API sd_img2img_options* new_sd_img2img_options();
-
-STABLE_DIFFUSION_API void set_img2img_init_img(sd_img2img_options* opt, const char* init_img);
-
-STABLE_DIFFUSION_API void set_img2img_prompt(sd_img2img_options* opt, const char* prompt);
-
-STABLE_DIFFUSION_API void set_img2img_negative_prompt(sd_img2img_options* opt, const char* negative_prompt);
-
-STABLE_DIFFUSION_API void set_img2img_cfg_scale(sd_img2img_options* opt, float cfg_scale);
-
-STABLE_DIFFUSION_API void set_img2img_size(sd_img2img_options* opt, int width, int height);
-
-STABLE_DIFFUSION_API void set_img2img_sample_method(sd_img2img_options* opt, const char* sample_method);
-
-STABLE_DIFFUSION_API void set_img2img_sample_steps(sd_img2img_options* opt, int sample_steps);
-
-STABLE_DIFFUSION_API void set_img2img_strength(sd_img2img_options* opt, float strength);
-
-STABLE_DIFFUSION_API void set_img2img_seed(sd_img2img_options* opt, int64_t seed);
-
-//================================================================================
-
-STABLE_DIFFUSION_API void* create_stable_diffusion(
+STABLE_DIFFUSION_API stable_diffusion_ctx* stable_diffusion_init(
     int n_threads,
     bool vae_decode_only,
     bool free_params_immediately,
     const char* lora_model_dir,
-    const char* rng_type);
+    const char* rng_type
+);
 
-STABLE_DIFFUSION_API void destroy_stable_diffusion(void* sd);
 
-STABLE_DIFFUSION_API bool load_from_file(void* sd, const char* file_path, const char* schedule);
+STABLE_DIFFUSION_API bool stable_diffusion_load_from_file(
+    const struct stable_diffusion_ctx* ctx,
+    const char* file_path,
+    const char* schedule
+);
 
-STABLE_DIFFUSION_API const char* txt2img(void* sd, const sd_txt2img_options* opt);
+STABLE_DIFFUSION_API const uint8_t* stable_diffusion_predict_image(
+    const struct stable_diffusion_ctx* ctx,
+    const struct stable_diffusion_full_params* params,
+    const char* prompt
+);
 
-STABLE_DIFFUSION_API const char* img2img(void* sd, const sd_img2img_options* opt);
+STABLE_DIFFUSION_API const uint8_t* stable_diffusion_image_predict_image(
+    const struct stable_diffusion_ctx* ctx,
+    const struct stable_diffusion_full_params* params,
+    const uint8_t* init_image,
+    const char* prompt
+);
 
-STABLE_DIFFUSION_API void set_stable_diffusion_log_level(const char* level);
+STABLE_DIFFUSION_API void stable_diffusion_set_log_level(const char* level);
 
-STABLE_DIFFUSION_API const char* get_stable_diffusion_system_info();
+STABLE_DIFFUSION_API const char* stable_diffusion_get_system_info();
 
-STABLE_DIFFUSION_API void free_buffer(const char* buffer);
+STABLE_DIFFUSION_API void stable_diffusion_free(const struct stable_diffusion_ctx* ctx);
+
+STABLE_DIFFUSION_API void stable_diffusion_free_full_params(const struct stable_diffusion_full_params* params);
+
+STABLE_DIFFUSION_API void stable_diffusion_free_buffer(const uint8_t* buffer);
 
 #ifdef __cplusplus
 }
