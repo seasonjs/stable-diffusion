@@ -44,8 +44,10 @@ type StableDiffusionOptions struct {
 }
 
 type StableDiffusionModel struct {
-	ctx        *CSDCtx
+	ctx        *StableDiffusionCtx
 	options    *StableDiffusionOptions
+	params     *StableDiffusionFullParams
+	csd        CStableDiffusion
 	isAutoLoad bool
 	dylibPath  string
 }
@@ -69,6 +71,38 @@ var DefaultStableDiffusionOptions = StableDiffusionOptions{
 	Seed:             42,
 	BatchCount:       1,
 	OutputsImageType: PNG,
+}
+
+func (s *StableDiffusionOptions) toStableDiffusionFullParamsRef(c CStableDiffusion) *StableDiffusionFullParams {
+	params := c.StableDiffusionFullDefaultParamsRef()
+	if len(s.NegativePrompt) != 0 {
+		c.StableDiffusionFullParamsSetNegativePrompt(params, s.NegativePrompt)
+	}
+	if s.CfgScale != 0 {
+		c.StableDiffusionFullParamsSetCfgScale(params, s.CfgScale)
+	}
+	if s.Width != 0 {
+		c.StableDiffusionFullParamsSetWidth(params, s.Width)
+	}
+	if s.Height != 0 {
+		c.StableDiffusionFullParamsSetHeight(params, s.Height)
+	}
+	c.StableDiffusionFullParamsSetSampleMethod(params, s.SampleMethod)
+	if s.SampleSteps != 0 {
+		c.StableDiffusionFullParamsSetSampleSteps(params, s.SampleSteps)
+	}
+	if s.Strength != 0 {
+		c.StableDiffusionFullParamsSetStrength(params, s.Strength)
+	}
+	if s.Seed != 0 {
+		c.StableDiffusionFullParamsSetSeed(params, s.Seed)
+	}
+	//default batch count is 1 in c++
+	if s.BatchCount != 0 && s.BatchCount != 1 {
+		c.StableDiffusionFullParamsSetBatchCount(params, s.BatchCount)
+	}
+
+	return params
 }
 
 func NewStableDiffusionAutoModel(options StableDiffusionOptions) (*StableDiffusionModel, error) {
@@ -101,16 +135,23 @@ func NewStableDiffusionModel(dylibPath string, options StableDiffusionOptions) (
 		options.BatchCount = 1
 	}
 
-	ctx := sd.NewStableDiffusionCtx(options.Threads, options.VaeDecodeOnly, options.FreeParamsImmediately, options.LoraModelDir, options.RngType)
+	ctx := sd.StableDiffusionInit(options.Threads, options.VaeDecodeOnly, options.FreeParamsImmediately, options.LoraModelDir, options.RngType)
+	params := options.toStableDiffusionFullParamsRef(sd)
 	return &StableDiffusionModel{
 		dylibPath: dylibPath,
 		ctx:       ctx,
 		options:   &options,
+		params:    params,
+		csd:       sd,
 	}, nil
 }
 
 func (sd *StableDiffusionModel) LoadFromFile(path string) error {
-	sd.ctx.StableDiffusionLoadFromFile(path, sd.options.Schedule)
+	_, err := os.Stat(path)
+	if err != nil {
+		return errors.New("the system cannot find the model file specified")
+	}
+	sd.csd.StableDiffusionLoadFromFile(sd.ctx, path, sd.options.Schedule)
 	return nil
 }
 
@@ -118,25 +159,17 @@ func (sd *StableDiffusionModel) Predict(prompt string, writer []io.Writer) error
 	if len(writer) != sd.options.BatchCount {
 		return errors.New("writer count not match batch count")
 	}
-	outputsBytes, err := sd.ctx.StableDiffusionTextToImage(
+	data := sd.csd.StableDiffusionPredictImage(
+		sd.ctx,
+		sd.params,
 		prompt,
-		sd.options.NegativePrompt,
-		sd.options.CfgScale,
-		sd.options.Width,
-		sd.options.Height,
-		sd.options.SampleMethod,
-		sd.options.SampleSteps,
-		sd.options.Seed,
-		sd.options.BatchCount,
 	)
 
-	if err != nil {
-		return err
-	}
+	result := chunkBytes(data, sd.options.BatchCount)
 
 	for i := 0; i < sd.options.BatchCount; i++ {
-		outputsImage := bytesToImage(outputsBytes[i], sd.options.Width, sd.options.Height)
-		err = imageToWriter(outputsImage, sd.options.OutputsImageType, writer[i])
+		outputsImage := bytesToImage(result[i], sd.options.Width, sd.options.Height)
+		err := imageToWriter(outputsImage, sd.options.OutputsImageType, writer[i])
 		if err != nil {
 			return err
 		}
@@ -151,37 +184,33 @@ func (sd *StableDiffusionModel) ImagePredict(reader io.Reader, prompt string, wr
 		return err
 	}
 	bytesImg := imageToBytes(decode)
-	outputsBytes, err := sd.ctx.StableDiffusionImageToImage(
+	outputsBytes := sd.csd.StableDiffusionImagePredictImage(
+		sd.ctx,
+		sd.params,
 		bytesImg,
 		prompt,
-		sd.options.NegativePrompt,
-		sd.options.CfgScale,
-		sd.options.Width,
-		sd.options.Height,
-		sd.options.SampleMethod,
-		sd.options.SampleSteps,
-		sd.options.Strength,
-		sd.options.Seed,
 	)
-	if err != nil {
-		return err
-	}
 	outputsImage := bytesToImage(outputsBytes, sd.options.Width, sd.options.Height)
 	return imageToWriter(outputsImage, sd.options.OutputsImageType, writer)
 }
 
 func (sd *StableDiffusionModel) Close() error {
-	sd.ctx.Close()
-	if sd.ctx.csd.libSd != 0 {
-		err := closeLibrary(sd.ctx.csd.libSd)
+	if sd.ctx != nil {
+		sd.csd.StableDiffusionFree(sd.ctx)
+		sd.ctx = nil
+	}
+
+	if sd.params != nil {
+		sd.csd.StableDiffusionFreeFullParams(sd.params)
+		sd.params = nil
+
+	}
+
+	if sd.isAutoLoad {
+		err := os.Remove(sd.dylibPath)
 		if err != nil {
 			return err
 		}
-	}
-	sd.ctx.csd.libSd = 0
-	if sd.isAutoLoad {
-		err := os.Remove(sd.dylibPath)
-		return err
 	}
 	return nil
 }
@@ -236,4 +265,21 @@ func imageToWriter(image image.Image, imageType OutputsImageType, writer io.Writ
 		return errors.New("unknown image type")
 	}
 	return nil
+}
+
+func chunkBytes(data []byte, chunks int) [][]byte {
+	length := len(data)
+	chunkSize := (length + chunks - 1) / chunks
+	result := make([][]byte, chunks)
+
+	for i := 0; i < chunks; i++ {
+		start := i * chunkSize
+		end := (i + 1) * chunkSize
+		if end > length {
+			end = length
+		}
+		result[i] = data[start:end:end]
+	}
+
+	return result
 }

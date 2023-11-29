@@ -4,7 +4,6 @@
 package sd
 
 import (
-	"encoding/base64"
 	"fmt"
 	"image"
 	"image/color"
@@ -101,33 +100,34 @@ func readFromFile(t *testing.T, path string) []byte {
 	}
 	return img
 }
-func TestStableDiffusionTextToImage(t *testing.T) {
-	sd, err := NewCStableDiffusion(getLibrary())
-	if err != nil {
-		t.Log(err)
-	}
-	ctx := sd.NewStableDiffusionCtx(8, true, true, "", CUDA_RNG)
-	defer ctx.Close()
-	ctx.StableDiffusionLoadFromFile("./models/miniSD-ggml-model-q5_0.bin", DEFAULT)
-	data, _ := ctx.StableDiffusionTextToImage("A lovely cat, high quality", "", 7.0, 256, 256, EULER_A, 20, 42, 1)
-	writeToFile(t, data[1], 256, 256, "./data/love_cat2.png")
-}
 
-func TestStableDiffusionImgToImage(t *testing.T) {
-	sd, err := NewCStableDiffusion(getLibrary())
-	if err != nil {
-		t.Log(err)
-	}
-	ctx := sd.NewStableDiffusionCtx(8, false, true, "", CUDA_RNG)
-	defer ctx.Close()
-	ctx.StableDiffusionLoadFromFile("./models/miniSD-ggml-model-q5_0.bin", DEFAULT)
-	img := readFromFile(t, "./data/love_cat2.png")
-	data, _ := ctx.StableDiffusionImageToImage(img, "A lovely cat that theme pink", "", 7.0, 256, 256, EULER_A, 20, 0.4, 42)
-	writeToFile(t, data, 256, 256, "./data/output1.png")
-}
-
-func TestBase64(t *testing.T) {
-	img := readFromFile(t, "./assets/love_cat2.png")
-	imgBase64 := base64.StdEncoding.EncodeToString(img)
-	t.Log(imgBase64)
-}
+//func TestStableDiffusionTextToImage(t *testing.T) {
+//	sd, err := NewCStableDiffusion(getLibrary())
+//	if err != nil {
+//		t.Log(err)
+//	}
+//	ctx := sd.NewStableDiffusionCtx(8, true, true, "", CUDA_RNG)
+//	defer ctx.Close()
+//	ctx.StableDiffusionLoadFromFile("./models/miniSD-ggml-model-q5_0.bin", DEFAULT)
+//	data, _ := ctx.StableDiffusionTextToImage("A lovely cat, high quality", "", 7.0, 256, 256, EULER_A, 20, 42, 1)
+//	writeToFile(t, data[1], 256, 256, "./data/love_cat2.png")
+//}
+//
+//func TestStableDiffusionImgToImage(t *testing.T) {
+//	sd, err := NewCStableDiffusion(getLibrary())
+//	if err != nil {
+//		t.Log(err)
+//	}
+//	ctx := sd.NewStableDiffusionCtx(8, false, true, "", CUDA_RNG)
+//	defer ctx.Close()
+//	ctx.StableDiffusionLoadFromFile("./models/miniSD-ggml-model-q5_0.bin", DEFAULT)
+//	img := readFromFile(t, "./data/love_cat2.png")
+//	data, _ := ctx.StableDiffusionImageToImage(img, "A lovely cat that theme pink", "", 7.0, 256, 256, EULER_A, 20, 0.4, 42)
+//	writeToFile(t, data, 256, 256, "./data/output1.png")
+//}
+//
+//func TestBase64(t *testing.T) {
+//	img := readFromFile(t, "./assets/love_cat2.png")
+//	imgBase64 := base64.StdEncoding.EncodeToString(img)
+//	t.Log(imgBase64)
+//}
