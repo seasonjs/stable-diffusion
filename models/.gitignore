@@ -3,3 +3,4 @@
 *.pth
 *.bin
 *.gguf
+*.safetensors
