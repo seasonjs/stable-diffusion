@@ -16,6 +16,8 @@ type SampleMethod string
 
 type Schedule string
 
+type GgmlType string
+
 const (
 	DEBUG SDLogLevel = "DEBUG"
 	INFO             = "INFO"
@@ -45,6 +47,17 @@ const (
 	DISCRETE             = "DISCRETE"
 	KARRAS               = "KARRAS"
 	N_SCHEDULES          = "N_SCHEDULES"
+)
+
+const (
+	T_DEFAULT GgmlType = "DEFAULT"
+	F32                = "F32"
+	F16                = "F16"
+	Q4_0               = "Q4_0"
+	Q4_1               = "Q4_1"
+	Q5_0               = "Q5_0"
+	Q5_1               = "Q5_1"
+	Q8_0               = "Q8_0"
 )
 
 const (
@@ -99,8 +112,8 @@ type CStableDiffusion interface {
 	StableDiffusionFullParamsSetBatchCount(params *StableDiffusionFullParams, batchCount int)
 	StableDiffusionFullParamsSetStrength(params *StableDiffusionFullParams, strength float32)
 
-	StableDiffusionInit(nThreads int, vaeDecodeOnly bool, freeParamsImmediately bool, loraModelDir string, rngType RNGType) *StableDiffusionCtx
-	StableDiffusionLoadFromFile(ctx *StableDiffusionCtx, filePath string, schedule Schedule)
+	StableDiffusionInit(nThreads int, vaeDecodeOnly bool, taesdPath string, freeParamsImmediately bool, loraModelDir string, rngType RNGType) *StableDiffusionCtx
+	StableDiffusionLoadFromFile(ctx *StableDiffusionCtx, filePath string, vaePath string, wtype GgmlType, schedule Schedule)
 	StableDiffusionPredictImage(ctx *StableDiffusionCtx, params *StableDiffusionFullParams, prompt string) []byte
 	StableDiffusionImagePredictImage(ctx *StableDiffusionCtx, params *StableDiffusionFullParams, initImage []byte, prompt string) []byte
 	StableDiffusionSetLogLevel(level SDLogLevel)
@@ -124,8 +137,8 @@ type CStableDiffusionImpl struct {
 	cStableDiffusionFullParamsSetBatchCount     func(params uintptr, batchCount int)
 	cStableDiffusionFullParamsSetStrength       func(params uintptr, strength float32)
 
-	cStableDiffusionInit              func(nThreads int, vaeDecodeOnly bool, freeParamsImmediately bool, loraModelDir string, rngType string) uintptr
-	cStableDiffusionLoadFromFile      func(ctx uintptr, filePath string, schedule string)
+	cStableDiffusionInit              func(nThreads int, vaeDecodeOnly bool, taesdPath string, freeParamsImmediately bool, loraModelDir string, rngType string) uintptr
+	cStableDiffusionLoadFromFile      func(ctx uintptr, filePath string, vaePath string, wtype string, schedule string) bool
 	cStableDiffusionPredictImage      func(ctx uintptr, params uintptr, prompt string) *byte
 	cStableDiffusionImagePredictImage func(ctx uintptr, params uintptr, initImage *byte, prompt string) *byte
 	cStableDiffusionSetLogLevel       func(level string)
@@ -142,8 +155,8 @@ func NewCStableDiffusion(libraryPath string) (CStableDiffusion, error) {
 	}
 	var (
 		stableDiffusionFullDefaultParamsRef        func() uintptr
-		stableDiffusionFullParamsSetNegativePrompt func(params uintptr, negative_prompt string)
-		stableDiffusionFullParamsSetCfgScale       func(params uintptr, cfg_scale float32)
+		stableDiffusionFullParamsSetNegativePrompt func(params uintptr, negativePrompt string)
+		stableDiffusionFullParamsSetCfgScale       func(params uintptr, cfgScale float32)
 		stableDiffusionFullParamsSetWidth          func(params uintptr, width int)
 		stableDiffusionFullParamsSetHeight         func(params uintptr, height int)
 		stableDiffusionFullParamsSetSampleMethod   func(params uintptr, sampleMethod string)
@@ -152,8 +165,8 @@ func NewCStableDiffusion(libraryPath string) (CStableDiffusion, error) {
 		stableDiffusionFullParamsSetBatchCount     func(params uintptr, batchCount int)
 		stableDiffusionFullParamsSetStrength       func(params uintptr, strength float32)
 
-		stableDiffusionInit              func(nThreads int, vaeDecodeOnly bool, freeParamsImmediately bool, loraModelDir string, rngType string) uintptr
-		stableDiffusionLoadFromFile      func(ctx uintptr, filePath string, schedule string)
+		stableDiffusionInit              func(nThreads int, vaeDecodeOnly bool, taesdPath string, freeParamsImmediately bool, loraModelDir string, rngType string) uintptr
+		stableDiffusionLoadFromFile      func(ctx uintptr, filePath string, vaePath string, wtype string, schedule string) bool
 		stableDiffusionPredictImage      func(ctx uintptr, params uintptr, prompt string) *byte
 		stableDiffusionImagePredictImage func(ctx uintptr, params uintptr, initImage *byte, prompt string) *byte
 		stableDiffusionSetLogLevel       func(level string)
@@ -259,14 +272,14 @@ func (c *CStableDiffusionImpl) StableDiffusionFullParamsSetStrength(params *Stab
 	params.strength = strength
 }
 
-func (c *CStableDiffusionImpl) StableDiffusionInit(nThreads int, vaeDecodeOnly bool, freeParamsImmediately bool, loraModelDir string, rngType RNGType) *StableDiffusionCtx {
+func (c *CStableDiffusionImpl) StableDiffusionInit(nThreads int, vaeDecodeOnly bool, taesdPath string, freeParamsImmediately bool, loraModelDir string, rngType RNGType) *StableDiffusionCtx {
 	return &StableDiffusionCtx{
-		ctx: c.cStableDiffusionInit(nThreads, vaeDecodeOnly, freeParamsImmediately, loraModelDir, string(rngType)),
+		ctx: c.cStableDiffusionInit(nThreads, vaeDecodeOnly, taesdPath, freeParamsImmediately, loraModelDir, string(rngType)),
 	}
 }
 
-func (c *CStableDiffusionImpl) StableDiffusionLoadFromFile(ctx *StableDiffusionCtx, filePath string, schedule Schedule) {
-	c.cStableDiffusionLoadFromFile(ctx.ctx, filePath, string(schedule))
+func (c *CStableDiffusionImpl) StableDiffusionLoadFromFile(ctx *StableDiffusionCtx, filePath string, vaePath string, wtype GgmlType, schedule Schedule) {
+	c.cStableDiffusionLoadFromFile(ctx.ctx, filePath, vaePath, string(wtype), string(schedule))
 }
 
 func (c *CStableDiffusionImpl) StableDiffusionPredictImage(ctx *StableDiffusionCtx, params *StableDiffusionFullParams, prompt string) []byte {

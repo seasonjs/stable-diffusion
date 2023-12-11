@@ -24,11 +24,13 @@ const (
 type StableDiffusionOptions struct {
 	Threads               int
 	VaeDecodeOnly         bool
+	TaesdPath             string
 	FreeParamsImmediately bool
 	LoraModelDir          string
 	RngType               RNGType
-
-	Schedule Schedule
+	VaePath               string
+	WType                 GgmlType
+	Schedule              Schedule
 
 	NegativePrompt   string
 	CfgScale         float32
@@ -58,8 +60,8 @@ var DefaultStableDiffusionOptions = StableDiffusionOptions{
 	FreeParamsImmediately: true,
 	LoraModelDir:          "",
 	RngType:               CUDA_RNG,
-
-	Schedule: DEFAULT,
+	WType:                 T_DEFAULT,
+	Schedule:              DEFAULT,
 
 	NegativePrompt:   "out of frame, lowers, text, error, cropped, worst quality, low quality, jpeg artifacts, ugly, duplicate, morbid, mutilated, out of frame, extra fingers, mutated hands, poorly drawn hands, poorly drawn face, mutation, deformed, blurry, dehydrated, bad anatomy, bad proportions, extra limbs, cloned face, disfigured, gross proportions, malformed limbs, missing arms, missing legs, extra arms, extra legs, fused fingers, too many fingers, long neck, username, watermark, signature",
 	CfgScale:         7.0,
@@ -98,7 +100,7 @@ func (s *StableDiffusionOptions) toStableDiffusionFullParamsRef(c CStableDiffusi
 		c.StableDiffusionFullParamsSetSeed(params, s.Seed)
 	}
 	//default batch count is 1 in c++
-	if s.BatchCount != 0 && s.BatchCount != 1 {
+	if s.BatchCount != 0 {
 		c.StableDiffusionFullParamsSetBatchCount(params, s.BatchCount)
 	}
 
@@ -135,7 +137,7 @@ func NewStableDiffusionModel(dylibPath string, options StableDiffusionOptions) (
 		options.BatchCount = 1
 	}
 
-	ctx := sd.StableDiffusionInit(options.Threads, options.VaeDecodeOnly, options.FreeParamsImmediately, options.LoraModelDir, options.RngType)
+	ctx := sd.StableDiffusionInit(options.Threads, options.VaeDecodeOnly, options.TaesdPath, options.FreeParamsImmediately, options.LoraModelDir, options.RngType)
 	params := options.toStableDiffusionFullParamsRef(sd)
 	return &StableDiffusionModel{
 		dylibPath: dylibPath,
@@ -151,8 +153,12 @@ func (sd *StableDiffusionModel) LoadFromFile(path string) error {
 	if err != nil {
 		return errors.New("the system cannot find the model file specified")
 	}
-	sd.csd.StableDiffusionLoadFromFile(sd.ctx, path, sd.options.Schedule)
+	sd.csd.StableDiffusionLoadFromFile(sd.ctx, path, sd.options.TaesdPath, sd.options.WType, sd.options.Schedule)
 	return nil
+}
+
+func (sd *StableDiffusionModel) SetOptions(options StableDiffusionOptions) {
+	sd.params = options.toStableDiffusionFullParamsRef(sd.csd)
 }
 
 func (sd *StableDiffusionModel) Predict(prompt string, writer []io.Writer) error {
@@ -232,6 +238,7 @@ func imageToBytes(decode image.Image) []byte {
 	}
 	return bytesImg
 }
+
 func bytesToImage(byteData []byte, width, height int) image.Image {
 	img := image.NewRGBA(image.Rect(0, 0, width, height))
 
