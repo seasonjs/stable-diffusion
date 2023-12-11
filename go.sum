@@ -15,6 +15,7 @@ github.com/schollz/progressbar/v3 v3.14.1 h1:VD+MJPCr4s3wdhTc7OEJ/Z3dAeBzJ7yKH/P
 github.com/schollz/progressbar/v3 v3.14.1/go.mod h1:Zc9xXneTzWXF81TGoqL71u0sBPjULtEHYtj/WVgVy8E=
 github.com/seasonjs/hf-hub v0.0.2 h1:wPWBAwrcbVQd9UDLFHEp1oEua2n95ZKgRfk2k7sBKow=
 github.com/seasonjs/hf-hub v0.0.2/go.mod h1:bIgK32RZh/Zn6FYeTvfIttO19hEmfNz0QdaPqFG1UIA=
+github.com/seasonjs/hf-hub v0.0.3/go.mod h1:bIgK32RZh/Zn6FYeTvfIttO19hEmfNz0QdaPqFG1UIA=
 github.com/stretchr/objx v0.1.0/go.mod h1:HFkY916IF+rwdDfMAkV7OtwuqBVzrE8GR6GFx+wExME=
 github.com/stretchr/testify v1.3.0 h1:TivCn/peBQ7UY8ooIcPgZFpTNSz0Q2U6UrFlUfqbe0Q=
 github.com/stretchr/testify v1.3.0/go.mod h1:M5WIy9Dh21IEIfnGCwXGc5bZfKNJtfHm1UVUgZn+9EI=

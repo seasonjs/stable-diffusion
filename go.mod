@@ -4,7 +4,7 @@ go 1.21
 
 require (
 	github.com/ebitengine/purego v0.5.1
-	github.com/seasonjs/hf-hub v0.0.2
+	github.com/seasonjs/hf-hub v0.0.3
 	golang.org/x/sys v0.15.0
 )
 
