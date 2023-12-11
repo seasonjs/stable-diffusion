@@ -19,7 +19,7 @@ func TestNewStableDiffusionAutoModelPredict(t *testing.T) {
 		return
 	}
 	defer model.Close()
-	err = model.LoadFromFile("./models/miniSD-f16.gguf")
+	err = model.LoadFromFile("./models/miniSD.ckpt")
 	if err != nil {
 		t.Error(err)
 		return
