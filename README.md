@@ -21,11 +21,11 @@ go get github.com/seasonjs/stable-diffusion
 
 See `deps` folder for dylib compatibility, push request is welcome.
 
-| platform | x32         | x64                     | arm         |
-|----------|-------------|-------------------------|-------------|
-| windows  | not support | support avx/avx2/avx512 | not support |
-| linux    | not support | support                 | not support |
-| darwin   | not support | support  (no test)      | support     |
+| platform | x32         | x64                     | arm         | cuda           |
+|----------|-------------|-------------------------|-------------|----------------|
+| windows  | not support | support avx/avx2/avx512 | not support | support cuda12 |
+| linux    | not support | support                 | not support |                |
+| darwin   | not support | support                 | support     |                |
 
 ## AutoModel Dynamic Libraries Disclaimer
 
@@ -42,7 +42,6 @@ If you are worried about the security of the dynamic library during the use proc
 ## Usage
 
 This `stable-diffusion` golang library provide two api `Predict` and `ImagePredict`.
-**You must instantiate each separately and set the correct options for the corresponding model.**
 
 You don't need to download stable-diffusion dynamic library.
 
@@ -50,72 +49,58 @@ You don't need to download stable-diffusion dynamic library.
 package main
 
 import (
+	sd "github.com/seasonjs/stable-diffusion"
+	"io"
 	"os"
-	"github.com/seasonjs/stable-diffusion"
+	"path/filepath"
 )
 
 func main() {
 	options := sd.DefaultStableDiffusionOptions
-	//It's important to set image size,different model support different size
-	options.Width = 256
-	options.Height = 256
+	options.Width = 512
+	options.Height = 512
+
 	model, err := sd.NewStableDiffusionAutoModel(options)
 	if err != nil {
-		panic(err)
+		print(err.Error())
+		return
 	}
 	defer model.Close()
-	err = model.LoadFromFile("./data/miniSD-ggml-model-q5_0.bin")
+
+	err = model.LoadFromFile("./models/mysd.safetensors")
 	if err != nil {
-		panic(err)
+		print(err.Error())
+		return
 	}
-	file, err := os.Create("./data/output2.png")
-	defer file.Close()
+	var writers []io.Writer
+
+	girl, err := filepath.Abs("./assets/a_girl.png")
 	if err != nil {
-		panic(err)
+		print(err.Error())
+		return
 	}
-	err = model.Predict("A lovely cat, high quality", file)
+
+	filenames := []string{
+		girl,
+	}
+	for _, filename := range filenames {
+		file, err := os.Create(filename)
+		if err != nil {
+			print(err.Error())
+			return
+		}
+		defer file.Close()
+		writers = append(writers, file)
+	}
+
+	err = model.Predict("a girl, high quality", writers)
 	if err != nil {
-		panic(err)
+		print(err.Error())
 	}
 }
 
 ```
-```go
-package main
-import (
-	"os"
-	"github.com/seasonjs/stable-diffusion"
-)
 
-func main()  {
-	options := sd.DefaultStableDiffusionOptions
-	//It's important to set image size,different model support different size
-	options.Width = 256
-	options.Height = 256
-	//ImagePredict model need set VaeDecodeOnly false
-	options.VaeDecodeOnly = false
-	model, err := sd.NewStableDiffusionAutoModel(options)
-	if err != nil {
-		panic(err)
-	}
-	defer model.Close()
-	err = model.LoadFromFile("./data/miniSD-ggml-model-q5_0.bin")
-	if err != nil {
-		panic(err)
-	}
-	inFile, err := os.Open("./data/output2.png")
-	defer inFile.Close()
-	if err != nil {
-		panic(err)
-	}
-	outfile, err := os.Create("./data/output3.png")
-	if err != nil {
-		panic(err)
-	}
-	defer outfile.Close()
-	err = model.ImagePredict(inFile, "the cat that wears shoes", outfile)
-}
-```
 If `NewStableDiffusionAutoModel` can't automatic loading of dynamic library, please use `NewStableDiffusionModel` method load manually.
 
 ```go
@@ -123,8 +108,8 @@ package main
 
 import (
 	"fmt"
+	sd "github.com/seasonjs/stable-diffusion"
 	"runtime"
-	"github.com/seasonjs/stable-diffusion"
 )
 
 func getLibrary() string {
@@ -139,13 +124,13 @@ func getLibrary() string {
 		panic(fmt.Errorf("GOOS=%s is not supported", runtime.GOOS))
 	}
 }
-func main()  {
+func main() {
 	options := sd.DefaultStableDiffusionOptions
 	//It's important to set image size,different model support different size
 	options.Width = 256
 	options.Height = 256
-	model, err := sd.NewStableDiffusionModel(getLibrary(),options)
-	print(model,err)
+	model, err := sd.NewStableDiffusionModel(getLibrary(), options)
+	print(model, err)
 	//.... the usage is same as `NewStableDiffusionAutoModel`. they both return `StableDiffusionModel` struct
 
 }
