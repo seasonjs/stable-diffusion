@@ -1,6 +1,7 @@
 package sd
 
 import (
+	"image"
 	"io"
 	"os"
 	"testing"
@@ -44,9 +45,10 @@ func TestNewStableDiffusionAutoModelPredict(t *testing.T) {
 	err = model.Predict("british short hair cat，high quality", writers)
 	if err != nil {
 		t.Error(err)
+		return
 	}
-
 }
+
 func TestNewStableDiffusionAutoModelImagePredict(t *testing.T) {
 	options := DefaultStableDiffusionOptions
 	options.Width = 256
@@ -59,24 +61,56 @@ func TestNewStableDiffusionAutoModelImagePredict(t *testing.T) {
 		return
 	}
 	defer model.Close()
-	err = model.LoadFromFile("./models/miniSD-f16.gguf")
+	err = model.LoadFromFile("./models/mysd.safetensors")
 	if err != nil {
 		t.Error(err)
 		return
 	}
 	inFile, err := os.Open("./assets/love_cat0.png")
-	defer inFile.Close()
 	if err != nil {
 		t.Error(err)
 		return
 	}
+	defer inFile.Close()
+
 	outfile, err := os.Create("./assets/shoes_cat.png")
 	if err != nil {
 		t.Error(err)
 		return
 	}
 	defer outfile.Close()
+
 	err = model.ImagePredict(inFile, "the cat that wears shoe", outfile)
+	if err != nil {
+		t.Error(err)
+		return
+	}
+}
+
+func TestImageToByte(t *testing.T) {
+	inFile, err := os.Open("./assets/love_cat0.png")
+	if err != nil {
+		t.Error(err)
+		return
+	}
+	defer inFile.Close()
+
+	outfile, err := os.Create("./assets/test_cat0.png")
+	if err != nil {
+		t.Error(err)
+		return
+	}
+	defer outfile.Close()
+
+	decode, _, err := image.Decode(inFile)
+	if err != nil {
+		t.Error(err)
+		return
+	}
+	outputsBytes := imageToBytes(decode)
+
+	outputsImage := bytesToImage(outputsBytes, 256, 256)
+	err = imageToWriter(outputsImage, "PNG", outfile)
 	if err != nil {
 		t.Error(err)
 		return
