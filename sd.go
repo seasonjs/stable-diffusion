@@ -158,6 +158,7 @@ func (sd *StableDiffusionModel) LoadFromFile(path string) error {
 }
 
 func (sd *StableDiffusionModel) SetOptions(options StableDiffusionOptions) {
+	sd.options = &options
 	sd.params = options.toStableDiffusionFullParamsRef(sd.csd)
 }
 
@@ -231,9 +232,9 @@ func imageToBytes(decode image.Image) []byte {
 		for y := bounds.Min.Y; y < bounds.Max.Y; y++ {
 			idx := (y*width + x) * 3
 			r, g, b, _ := decode.At(x, y).RGBA()
-			bytesImg[idx] = byte(r)
-			bytesImg[idx+1] = byte(g)
-			bytesImg[idx+2] = byte(b)
+			bytesImg[idx] = byte(r >> 8)
+			bytesImg[idx+1] = byte(g >> 8)
+			bytesImg[idx+2] = byte(b >> 8)
 		}
 	}
 	return bytesImg
