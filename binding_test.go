@@ -20,7 +20,7 @@ func getLibrary() string {
 	case "linux":
 		return "./deps/linux/libstable-diffusion.so"
 	case "windows":
-		return "./deps/windows/stable-diffusion_avx2.dll"
+		return "./deps/windows/sd-abi_avx2.dll"
 	default:
 		panic(fmt.Errorf("GOOS=%s is not supported", runtime.GOOS))
 	}
@@ -99,6 +99,25 @@ func readFromFile(t *testing.T, path string) []byte {
 		}
 	}
 	return img
+}
+
+func TestNewCStableDiffusionText2Img(t *testing.T) {
+	diffusion, err := NewCStableDiffusion(getLibrary())
+	if err != nil {
+		t.Error(err)
+		return
+	}
+	diffusion.sdSetLogCallback(func(level int, text uintptr, data uintptr) uintptr {
+		info := GoString(text)
+		fmt.Printf("%d: %s", level, info)
+		return 0
+	}, 0)
+	ctx := diffusion.newSdCtx("./models/miniSD.ckpt", "", "", "", false, false, true, -1, 6, 1, 0)
+	defer diffusion.freeSdCtx(ctx)
+
+	img := diffusion.txt2img(ctx, "a lovely cat", "", -1, 1.0, 256, 256, 0, 10, 42, 4)
+	imgs := GoImageSlice(img, 4)
+	t.Log(imgs)
 }
 
 //func TestStableDiffusionTextToImage(t *testing.T) {
