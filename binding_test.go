@@ -16,7 +16,7 @@ import (
 func getLibrary() string {
 	switch runtime.GOOS {
 	case "darwin":
-		return "./deps/darwin/libstable-diffusion_arm64.dylib"
+		return "./deps/darwin/libsd-abi.dylib"
 	case "linux":
 		return "./deps/linux/libstable-diffusion.so"
 	case "windows":
@@ -108,45 +108,14 @@ func TestNewCStableDiffusionText2Img(t *testing.T) {
 		return
 	}
 	diffusion.sdSetLogCallback(func(level int, text uintptr, data uintptr) uintptr {
-		info := GoString(text)
+		info := goString(text)
 		fmt.Printf("%d: %s", level, info)
 		return 0
 	}, 0)
-	ctx := diffusion.newSdCtx("./models/miniSD.ckpt", "", "", "", false, false, true, -1, 6, 1, 0)
+	ctx := diffusion.newSdCtx("./models/mysd.safetensors", "", "", "", false, false, true, -1, 6, 1, 0)
 	defer diffusion.freeSdCtx(ctx)
 
-	img := diffusion.txt2img(ctx, "a lovely cat", "", -1, 1.0, 256, 256, 0, 10, 42, 4)
-	imgs := GoImageSlice(img, 4)
+	img := diffusion.txt2img(ctx, "a lovely cat", "", -1, 1.0, 256, 256, 0, 10, 42, 1)
+	imgs := goImageSlice(img, 1)
 	t.Log(imgs)
 }
-
-//func TestStableDiffusionTextToImage(t *testing.T) {
-//	sd, err := NewCStableDiffusion(getLibrary())
-//	if err != nil {
-//		t.Log(err)
-//	}
-//	ctx := sd.NewStableDiffusionCtx(8, true, true, "", CUDA_RNG)
-//	defer ctx.Close()
-//	ctx.StableDiffusionLoadFromFile("./models/miniSD-ggml-model-q5_0.bin", DEFAULT)
-//	data, _ := ctx.StableDiffusionTextToImage("A lovely cat, high quality", "", 7.0, 256, 256, EULER_A, 20, 42, 1)
-//	writeToFile(t, data[1], 256, 256, "./data/love_cat2.png")
-//}
-//
-//func TestStableDiffusionImgToImage(t *testing.T) {
-//	sd, err := NewCStableDiffusion(getLibrary())
-//	if err != nil {
-//		t.Log(err)
-//	}
-//	ctx := sd.NewStableDiffusionCtx(8, false, true, "", CUDA_RNG)
-//	defer ctx.Close()
-//	ctx.StableDiffusionLoadFromFile("./models/miniSD-ggml-model-q5_0.bin", DEFAULT)
-//	img := readFromFile(t, "./data/love_cat2.png")
-//	data, _ := ctx.StableDiffusionImageToImage(img, "A lovely cat that theme pink", "", 7.0, 256, 256, EULER_A, 20, 0.4, 42)
-//	writeToFile(t, data, 256, 256, "./data/output1.png")
-//}
-//
-//func TestBase64(t *testing.T) {
-//	img := readFromFile(t, "./assets/love_cat2.png")
-//	imgBase64 := base64.StdEncoding.EncodeToString(img)
-//	t.Log(imgBase64)
-//}
