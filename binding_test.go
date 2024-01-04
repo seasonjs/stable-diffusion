@@ -1,10 +1,11 @@
 // Copyright (c) seasonjs. All rights reserved.
 // Licensed under the MIT License. See License.txt in the project root for license information.
 
-package sd
+package sd_test
 
 import (
 	"fmt"
+	sd "github.com/seasonjs/stable-diffusion"
 	"image"
 	"image/color"
 	"image/png"
@@ -73,7 +74,7 @@ func writeToFile(t *testing.T, byteData []byte, height int, width int, outputPat
 	t.Log("Image saved at", outputPath)
 }
 
-func readFromFile(t *testing.T, path string) []byte {
+func readFromFile(t *testing.T, path string) *sd.Image {
 	file, err := os.Open(path)
 	if err != nil {
 		t.Error(err)
@@ -98,24 +99,44 @@ func readFromFile(t *testing.T, path string) []byte {
 			img[idx+2] = byte(b)
 		}
 	}
-	return img
+	return &sd.Image{
+		Width:  uint32(width),
+		Height: uint32(height),
+		Data:   img,
+	}
 }
 
 func TestNewCStableDiffusionText2Img(t *testing.T) {
-	diffusion, err := NewCStableDiffusion(getLibrary())
+	diffusion, err := sd.NewCStableDiffusion(getLibrary())
 	if err != nil {
 		t.Error(err)
 		return
 	}
-	diffusion.sdSetLogCallback(func(level int, text uintptr, data uintptr) uintptr {
-		info := goString(text)
-		fmt.Printf("%d: %s", level, info)
-		return 0
-	}, 0)
-	ctx := diffusion.newSdCtx("./models/mysd.safetensors", "", "", "", false, false, true, -1, 6, 1, 0)
-	defer diffusion.freeSdCtx(ctx)
+	diffusion.SetLogCallBack(func(level sd.LogLevel, text string) {
+		fmt.Printf("%s", text)
+	})
+	ctx := diffusion.NewCtx("./models/miniSD.ckpt", "", "", "", false, false, true, 4, sd.F16, sd.CUDA_RNG, sd.DEFAULT)
+	defer diffusion.FreeCtx(ctx)
 
-	img := diffusion.txt2img(ctx, "a lovely cat", "", -1, 1.0, 256, 256, 0, 10, 42, 1)
-	imgs := goImageSlice(img, 1)
-	t.Log(imgs)
+	images := diffusion.PredictImage(ctx, "british short hair cat, high quality", "", 0, 7.0, 256, 256, sd.EULER_A, 10, 42, 1)
+
+	writeToFile(t, images[0].Data, 256, 256, "./assets/test.png")
+}
+
+func TestNewCStableDiffusionImg2Img(t *testing.T) {
+	diffusion, err := sd.NewCStableDiffusion(getLibrary())
+	if err != nil {
+		t.Error(err)
+		return
+	}
+	diffusion.SetLogCallBack(func(level sd.LogLevel, text string) {
+		fmt.Printf("%s", text)
+	})
+	ctx := diffusion.NewCtx("./models/miniSD.ckpt", "", "", "", false, false, true, -1, sd.F16, sd.CUDA_RNG, sd.DEFAULT)
+	defer diffusion.FreeCtx(ctx)
+
+	img := readFromFile(t, "./assets/test.png")
+	images := diffusion.ImagePredictImage(ctx, *img, "cat wears shoes, high quality", "", 0, 7.0, 256, 256, sd.EULER_A, 20, 0.4, 42, 1)
+
+	writeToFile(t, images[0].Data, 256, 256, "./assets/test1.png")
 }
