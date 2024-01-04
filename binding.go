@@ -5,6 +5,7 @@ package sd
 
 import (
 	"github.com/ebitengine/purego"
+	"runtime"
 	"unsafe"
 )
 
@@ -91,7 +92,7 @@ type CUpScalerCtx struct {
 	ctx uintptr
 }
 
-type CLogCallback func(level int, text uintptr)
+type CLogCallback func(level LogLevel, text string)
 
 type CStableDiffusion interface {
 	NewCtx(modelPath string, vaePath string, taesdPath string, loraModelDir string, vaeDecodeOnly bool, vaeTiling bool, freeParamsImmediately bool, nThreads int, wType WType, rngType RNGType, schedule Schedule) *CStableDiffusionCtx
@@ -101,9 +102,9 @@ type CStableDiffusion interface {
 	GetSystemInfo() string
 	FreeCtx(ctx *CStableDiffusionCtx)
 
-	NewUpscalerCtx()
-	FreeUpscalerCtx()
-	UpscaleImage(ctx *CUpScalerCtx, img Image, upscaleFactor int) []byte
+	NewUpscalerCtx(esrganPath string, nThreads int, wtype WType) *CUpScalerCtx
+	FreeUpscalerCtx(ctx *CUpScalerCtx)
+	UpscaleImage(ctx *CUpScalerCtx, img Image, upscaleFactor uint32) Image
 }
 
 type cImage struct {
@@ -123,6 +124,8 @@ type Image struct {
 type CStableDiffusionImpl struct {
 	libSd uintptr
 
+	sdGetSystemInfo func() string
+
 	newSdCtx func(modelPath string, vaePath string, taesdPath string, loraModelDir string, vaeDecodeOnly bool, vaeTiling bool, freeParamsImmediately bool, nThreads int, wtype int, rngType int, schedule int) uintptr
 
 	sdSetLogCallback func(callback func(level int, text uintptr, data uintptr) uintptr, data uintptr)
@@ -133,11 +136,79 @@ type CStableDiffusionImpl struct {
 
 	freeSdCtx func(ctx uintptr)
 
-	newUpscalerCtx func(esrganPath string, n_threads int, wtype int) uintptr
+	newUpscalerCtx func(esrganPath string, nThreads int, wtype int) uintptr
 
 	freeUpscalerCtx func(ctx uintptr)
 
 	upscale func(ctx uintptr, img uintptr, upscaleFactor uint32) uintptr
+}
+
+func (c *CStableDiffusionImpl) NewCtx(modelPath string, vaePath string, taesdPath string, loraModelDir string, vaeDecodeOnly bool, vaeTiling bool, freeParamsImmediately bool, nThreads int, wType WType, rngType RNGType, schedule Schedule) *CStableDiffusionCtx {
+	ctx := c.newSdCtx(modelPath, vaePath, taesdPath, loraModelDir, vaeDecodeOnly, vaeTiling, freeParamsImmediately, nThreads, int(wType), int(rngType), int(schedule))
+	return &CStableDiffusionCtx{
+		ctx: ctx,
+	}
+}
+
+func (c *CStableDiffusionImpl) PredictImage(ctx *CStableDiffusionCtx, prompt string, negativePrompt string, clipSkip int, cfgScale float32, width int, height int, sampleMethod SampleMethod, sampleSteps int, seed int64, batchCount int) []Image {
+	images := c.txt2img(ctx.ctx, prompt, negativePrompt, clipSkip, cfgScale, width, height, int(sampleMethod), sampleSteps, seed, batchCount)
+	return goImageSlice(images, batchCount)
+}
+
+func (c *CStableDiffusionImpl) ImagePredictImage(ctx *CStableDiffusionCtx, img Image, prompt string, negativePrompt string, clipSkip int, cfgScale float32, width int, height int, sampleMethod SampleMethod, sampleSteps int, strength float32, seed int64, batchCount int) []Image {
+	images := c.img2img(ctx.ctx, uintptr(unsafe.Pointer(&img)), prompt, negativePrompt, clipSkip, cfgScale, width, height, int(sampleMethod), sampleSteps, strength, seed, batchCount)
+	return goImageSlice(images, batchCount)
+}
+
+func (c *CStableDiffusionImpl) SetLogCallBack(cb CLogCallback) {
+	c.sdSetLogCallback(func(level int, text uintptr, data uintptr) uintptr {
+		cb(LogLevel(level), goString(text))
+		return 0
+	}, 0)
+}
+
+func (c *CStableDiffusionImpl) GetSystemInfo() string {
+	return c.sdGetSystemInfo()
+}
+
+func (c *CStableDiffusionImpl) FreeCtx(ctx *CStableDiffusionCtx) {
+	ptr := *(*unsafe.Pointer)(unsafe.Pointer(&ctx.ctx))
+	if ptr != nil {
+		c.freeSdCtx(ctx.ctx)
+	}
+	ctx = nil
+	runtime.GC()
+}
+
+func (c *CStableDiffusionImpl) NewUpscalerCtx(esrganPath string, nThreads int, wtype WType) *CUpScalerCtx {
+	ctx := c.newUpscalerCtx(esrganPath, nThreads, int(wtype))
+
+	return &CUpScalerCtx{ctx: ctx}
+}
+
+func (c *CStableDiffusionImpl) FreeUpscalerCtx(ctx *CUpScalerCtx) {
+	ptr := *(*unsafe.Pointer)(unsafe.Pointer(&ctx.ctx))
+	if ptr != nil {
+		c.freeUpscalerCtx(ctx.ctx)
+	}
+	ctx = nil
+	runtime.GC()
+}
+
+func (c *CStableDiffusionImpl) UpscaleImage(ctx *CUpScalerCtx, img Image, upscaleFactor uint32) Image {
+	uptr := c.upscale(ctx.ctx, uintptr(unsafe.Pointer(&img)), upscaleFactor)
+	ptr := *(*unsafe.Pointer)(unsafe.Pointer(&uptr))
+	if ptr == nil {
+		return Image{}
+	}
+	cimg := (*cImage)(ptr)
+	dataPtr := *(*unsafe.Pointer)(unsafe.Pointer(&cimg.data))
+	return Image{
+		Width:   cimg.width,
+		Height:  cimg.height,
+		Channel: cimg.channel,
+		Data:    unsafe.Slice((*byte)(dataPtr), cimg.channel*cimg.width*cimg.height),
+	}
 }
 
 func NewCStableDiffusion(libraryPath string) (*CStableDiffusionImpl, error) {
@@ -148,11 +219,17 @@ func NewCStableDiffusion(libraryPath string) (*CStableDiffusionImpl, error) {
 
 	impl := CStableDiffusionImpl{}
 
+	purego.RegisterLibFunc(&impl.sdSetLogCallback, libSd, "sd_get_system_info")
+
 	purego.RegisterLibFunc(&impl.newSdCtx, libSd, "new_sd_ctx")
 	purego.RegisterLibFunc(&impl.sdSetLogCallback, libSd, "sd_set_log_callback")
 	purego.RegisterLibFunc(&impl.txt2img, libSd, "txt2img")
 	purego.RegisterLibFunc(&impl.img2img, libSd, "img2img")
 	purego.RegisterLibFunc(&impl.freeSdCtx, libSd, "free_sd_ctx")
+
+	purego.RegisterLibFunc(&impl.newUpscalerCtx, libSd, "new_upscaler_ctx")
+	purego.RegisterLibFunc(&impl.freeUpscalerCtx, libSd, "free_upscaler_ctx")
+	purego.RegisterLibFunc(&impl.upscale, libSd, "upscale")
 
 	return &impl, nil
 }
@@ -170,7 +247,7 @@ func goString(c uintptr) string {
 		}
 		length++
 	}
-	return string(unsafe.Slice((*byte)(ptr), length))
+	return unsafe.String((*byte)(ptr), length)
 }
 
 func goImageSlice(c uintptr, size int) []Image {
@@ -193,6 +270,5 @@ func goImageSlice(c uintptr, size int) []Image {
 		}
 		goImages = append(goImages, gImg)
 	}
-
 	return goImages
 }
