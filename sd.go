@@ -21,18 +21,23 @@ const (
 	JPEG                  = "JPEG"
 )
 
-type StableDiffusionOptions struct {
-	Threads               int
-	VaeDecodeOnly         bool
-	TaesdPath             string
-	FreeParamsImmediately bool
-	LoraModelDir          string
-	RngType               RNGType
+type Options struct {
 	VaePath               string
-	WType                 WType
+	TaesdPath             string
+	LoraModelDir          string
+	VaeDecodeOnly         bool
+	VaeTiling             bool
+	FreeParamsImmediately bool
+	Threads               int
+	Wtype                 WType
+	RngType               RNGType
 	Schedule              Schedule
+	GpuEnable             bool
+}
 
+type FullParams struct {
 	NegativePrompt   string
+	ClipSkip         int
 	CfgScale         float32
 	Width            int
 	Height           int
@@ -41,28 +46,20 @@ type StableDiffusionOptions struct {
 	Strength         float32
 	Seed             int64
 	BatchCount       int
-	GpuEnable        bool
 	OutputsImageType OutputsImageType
 }
 
-type StableDiffusionModel struct {
-	ctx        *CStableDiffusionCtx
-	options    *StableDiffusionOptions
-	params     *StableDiffusionFullParams
-	csd        CStableDiffusion
-	isAutoLoad bool
-	dylibPath  string
-}
-
-var DefaultStableDiffusionOptions = StableDiffusionOptions{
+var DefaultOptions = Options{
 	Threads:               -1, // auto
 	VaeDecodeOnly:         true,
 	FreeParamsImmediately: true,
 	LoraModelDir:          "",
 	RngType:               CUDA_RNG,
-	WType:                 F32,
+	Wtype:                 F32,
 	Schedule:              DEFAULT,
+}
 
+var DefaultFullParams = FullParams{
 	NegativePrompt:   "out of frame, lowers, text, error, cropped, worst quality, low quality, jpeg artifacts, ugly, duplicate, morbid, mutilated, out of frame, extra fingers, mutated hands, poorly drawn hands, poorly drawn face, mutation, deformed, blurry, dehydrated, bad anatomy, bad proportions, extra limbs, cloned face, disfigured, gross proportions, malformed limbs, missing arms, missing legs, extra arms, extra legs, fused fingers, too many fingers, long neck, username, watermark, signature",
 	CfgScale:         7.0,
 	Width:            500,
@@ -75,39 +72,16 @@ var DefaultStableDiffusionOptions = StableDiffusionOptions{
 	OutputsImageType: PNG,
 }
 
-func (s *StableDiffusionOptions) toStableDiffusionFullParamsRef(c CStableDiffusion) *StableDiffusionFullParams {
-	//params := c.StableDiffusionFullDefaultParamsRef()
-	//if len(s.NegativePrompt) != 0 {
-	//	c.StableDiffusionFullParamsSetNegativePrompt(params, s.NegativePrompt)
-	//}
-	//if s.CfgScale != 0 {
-	//	c.StableDiffusionFullParamsSetCfgScale(params, s.CfgScale)
-	//}
-	//if s.Width != 0 {
-	//	c.StableDiffusionFullParamsSetWidth(params, s.Width)
-	//}
-	//if s.Height != 0 {
-	//	c.StableDiffusionFullParamsSetHeight(params, s.Height)
-	//}
-	//c.StableDiffusionFullParamsSetSampleMethod(params, s.SampleMethod)
-	//if s.SampleSteps != 0 {
-	//	c.StableDiffusionFullParamsSetSampleSteps(params, s.SampleSteps)
-	//}
-	//if s.Strength != 0 {
-	//	c.StableDiffusionFullParamsSetStrength(params, s.Strength)
-	//}
-	//if s.Seed != 0 {
-	//	c.StableDiffusionFullParamsSetSeed(params, s.Seed)
-	//}
-	////default batch count is 1 in c++
-	//if s.BatchCount != 0 {
-	//	c.StableDiffusionFullParamsSetBatchCount(params, s.BatchCount)
-	//}
-
-	return nil
+type Model struct {
+	ctx                *CStableDiffusionCtx
+	options            *Options
+	csd                CStableDiffusion
+	isAutoLoad         bool
+	dylibPath          string
+	diffusionModelPath string
 }
 
-func NewStableDiffusionAutoModel(options StableDiffusionOptions) (*StableDiffusionModel, error) {
+func NewAutoModel(options Options) (*Model, error) {
 	file, err := dumpSDLibrary(options.GpuEnable)
 	if err != nil {
 		return nil, err
@@ -115,11 +89,10 @@ func NewStableDiffusionAutoModel(options StableDiffusionOptions) (*StableDiffusi
 
 	if options.GpuEnable {
 		log.Printf("If you want to try offload your model to the GPU. " +
-			"Please confirm the size of your GPU memory to prevent memory overflow." +
-			"If the model is larger than GPU memory, please specify the layers to offload.")
+			"Please confirm the size of your GPU memory to prevent memory overflow.")
 	}
 	dylibPath := file.Name()
-	model, err := NewStableDiffusionModel(dylibPath, options)
+	model, err := NewModel(dylibPath, options)
 	if err != nil {
 		return nil, err
 	}
@@ -127,105 +100,169 @@ func NewStableDiffusionAutoModel(options StableDiffusionOptions) (*StableDiffusi
 	return model, nil
 }
 
-func NewStableDiffusionModel(dylibPath string, options StableDiffusionOptions) (*StableDiffusionModel, error) {
-	//sd, err := NewCStableDiffusion(dylibPath)
-	//if err != nil {
-	//	return nil, err
-	//}
-	//
-	//if options.BatchCount < 1 {
-	//	options.BatchCount = 1
-	//}
+func NewModel(dylibPath string, options Options) (*Model, error) {
+	csd, err := NewCStableDiffusion(dylibPath)
+	if err != nil {
+		return nil, err
+	}
 
-	//ctx := sd.StableDiffusionInit(options.Threads, options.VaeDecodeOnly, options.TaesdPath, options.FreeParamsImmediately, options.LoraModelDir, options.RngType)
-	//params := options.toStableDiffusionFullParamsRef(sd)
-	//return &StableDiffusionModel{
-	//	dylibPath: dylibPath,
-	//	ctx:       ctx,
-	//	options:   &options,
-	//	params:    params,
-	//	csd:       sd,
-	//}, nil
-	return nil, nil
+	return &Model{
+		dylibPath: dylibPath,
+		options:   &options,
+		csd:       csd,
+	}, nil
 }
 
-func (sd *StableDiffusionModel) LoadFromFile(path string) error {
+func (sd *Model) LoadFromFile(path string) error {
+	if sd.ctx != nil {
+		sd.csd.FreeCtx(sd.ctx)
+		sd.ctx = nil
+		log.Printf("model already loaded, free old model")
+	}
+
 	_, err := os.Stat(path)
 	if err != nil {
 		return errors.New("the system cannot find the model file specified")
 	}
-	//sd.csd.StableDiffusionLoadFromFile(sd.ctx, path, sd.options.TaesdPath, sd.options.WType, sd.options.Schedule)
-	//return nil
+
+	sd.diffusionModelPath = path
+	ctx := sd.csd.NewCtx(path,
+		sd.options.VaePath,
+		sd.options.TaesdPath,
+		sd.options.LoraModelDir,
+		sd.options.VaeDecodeOnly,
+		sd.options.VaeTiling,
+		sd.options.FreeParamsImmediately,
+		sd.options.Threads,
+		sd.options.Wtype,
+		sd.options.RngType,
+		sd.options.Schedule)
+	sd.ctx = ctx
 	return nil
 }
 
-func (sd *StableDiffusionModel) SetOptions(options StableDiffusionOptions) {
+func (sd *Model) SetOptions(options Options) {
+	if sd.ctx != nil {
+		sd.csd.FreeCtx(sd.ctx)
+		sd.ctx = nil
+		log.Printf("model already loaded, free old model and set new options")
+	}
 	sd.options = &options
-	sd.params = options.toStableDiffusionFullParamsRef(sd.csd)
+	ctx := sd.csd.NewCtx(
+		sd.diffusionModelPath,
+		sd.options.VaePath,
+		sd.options.TaesdPath,
+		sd.options.LoraModelDir,
+		sd.options.VaeDecodeOnly,
+		sd.options.VaeTiling,
+		sd.options.FreeParamsImmediately,
+		sd.options.Threads,
+		sd.options.Wtype,
+		sd.options.RngType,
+		sd.options.Schedule)
+	sd.ctx = ctx
 }
 
-func (sd *StableDiffusionModel) Predict(prompt string, writer []io.Writer) error {
-	if len(writer) != sd.options.BatchCount {
+func (sd *Model) Predict(prompt string, params FullParams, writer []io.Writer) error {
+	if len(writer) != params.BatchCount {
 		return errors.New("writer count not match batch count")
 	}
-	//data := sd.csd.PredictImage(
-	//	sd.ctx,
-	//	sd.params,
-	//	prompt,
-	//)
-	//
-	//result := chunkBytes(data, sd.options.BatchCount)
-	//
-	//for i := 0; i < sd.options.BatchCount; i++ {
-	//	outputsImage := bytesToImage(result[i], sd.options.Width, sd.options.Height)
-	//	err := imageToWriter(outputsImage, sd.options.OutputsImageType, writer[i])
-	//	if err != nil {
-	//		return err
-	//	}
-	//}
+	if sd.ctx == nil {
+		return errors.New("model not loaded")
+	}
+	images := sd.csd.PredictImage(
+		sd.ctx,
+		prompt,
+		params.NegativePrompt,
+		params.ClipSkip,
+		params.CfgScale,
+		params.Width,
+		params.Height,
+		params.SampleMethod,
+		params.SampleSteps,
+		params.Seed,
+		params.BatchCount,
+	)
+
+	if images == nil || len(images) != params.BatchCount {
+		return errors.New("predict failed")
+	}
+
+	for i, img := range images {
+		outputsImage := bytesToImage(img.Data, int(img.Width), int(img.Height))
+
+		err := imageToWriter(outputsImage, params.OutputsImageType, writer[i])
+		if err != nil {
+			return err
+		}
+	}
 
 	return nil
 }
 
-func (sd *StableDiffusionModel) ImagePredict(reader io.Reader, prompt string, writer io.Writer) error {
+func (sd *Model) ImagePredict(reader io.Reader, prompt string, params FullParams, writer []io.Writer) error {
+
+	if len(writer) != params.BatchCount {
+		return errors.New("writer count not match batch count")
+	}
+
+	if sd.ctx == nil {
+		return errors.New("model not loaded")
+	}
+
 	decode, _, err := image.Decode(reader)
 	if err != nil {
 		return err
 	}
-	_ = imageToBytes(decode)
-	//outputsBytes := sd.csd.StableDiffusionImagePredictImage(
-	//	sd.ctx,
-	//	sd.params,
-	//	bytesImg,
-	//	prompt,
-	//)
-	//outputsImage := bytesToImage(outputsBytes, sd.options.Width, sd.options.Height)
-	//return imageToWriter(outputsImage, sd.options.OutputsImageType, writer)
+	initImage := imageToBytes(decode)
+	images := sd.csd.ImagePredictImage(
+		sd.ctx,
+		initImage,
+		prompt,
+		params.NegativePrompt,
+		params.ClipSkip,
+		params.CfgScale,
+		params.Width,
+		params.Height,
+		params.SampleMethod,
+		params.SampleSteps,
+		params.Strength,
+		params.Seed,
+		params.BatchCount,
+	)
+	for i, img := range images {
+		outputsImage := bytesToImage(img.Data, int(img.Width), int(img.Height))
+		err = imageToWriter(outputsImage, params.OutputsImageType, writer[i])
+		if err != nil {
+			return err
+		}
+	}
 	return nil
 }
 
-func (sd *StableDiffusionModel) Close() error {
-	//if sd.ctx != nil {
-	//	sd.csd.StableDiffusionFree(sd.ctx)
-	//	sd.ctx = nil
-	//}
-	//
-	//if sd.params != nil {
-	//	//sd.csd.StableDiffusionFreeFullParams(sd.params)
-	//	sd.params = nil
-	//
-	//}
-	//
-	//if sd.isAutoLoad {
-	//	err := os.Remove(sd.dylibPath)
-	//	if err != nil {
-	//		return err
-	//	}
-	//}
+func (sd *Model) Close() error {
+	if sd.ctx != nil {
+		sd.csd.FreeCtx(sd.ctx)
+		sd.ctx = nil
+	}
+
+	if sd.csd != nil {
+		err := sd.csd.Close()
+		if err != nil {
+			return err
+		}
+	}
+
+	if sd.isAutoLoad {
+		err := os.Remove(sd.dylibPath)
+		if err != nil {
+			return err
+		}
+	}
 	return nil
 }
 
-func imageToBytes(decode image.Image) []byte {
+func imageToBytes(decode image.Image) Image {
 	bounds := decode.Bounds()
 	width := bounds.Max.X - bounds.Min.X
 	height := bounds.Max.Y - bounds.Min.Y
@@ -240,7 +277,11 @@ func imageToBytes(decode image.Image) []byte {
 			bytesImg[idx+2] = byte(b >> 8)
 		}
 	}
-	return bytesImg
+	return Image{
+		Width:  uint32(width),
+		Height: uint32(height),
+		Data:   bytesImg,
+	}
 }
 
 func bytesToImage(byteData []byte, width, height int) image.Image {
