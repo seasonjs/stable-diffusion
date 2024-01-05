@@ -1,10 +1,10 @@
 # stable-diffusion
 
-pure go for stable-diffusion and support cross-platform.
+pure go ( cgo free ) for stable-diffusion and support cross-platform.
 
 [![Go Reference](https://pkg.go.dev/badge/github.com/seasonjs/stable-diffusion.svg)](https://pkg.go.dev/github.com/seasonjs/stable-diffusion)
 
-sd.go is a wrapper around [stable-diffusion-cpp](https://github.com/leejet/stable-diffusion.cpp), which is an adaption
+sd.go is a wrapper around [stable-diffusion.cpp](https://github.com/leejet/stable-diffusion.cpp), which is an adaption
 of ggml.cpp.
 
 <p align="center">
@@ -43,45 +43,52 @@ If you are worried about the security of the dynamic library during the use proc
 
 This `stable-diffusion` golang library provide two api `Predict` and `ImagePredict`.
 
-You don't need to download stable-diffusion dynamic library.
+Usually you can use `NewAutoModel`, so you don't need to load the dynamic library.
+
+You can find a complete example in [examples](./exmaples) folder.
+
+Here is a simple example:
 
 ```go
 package main
 
 import (
+	"github.com/seasonjs/hf-hub/api"
 	sd "github.com/seasonjs/stable-diffusion"
 	"io"
 	"os"
-	"path/filepath"
 )
 
 func main() {
-	options := sd.DefaultStableDiffusionOptions
-	options.Width = 512
-	options.Height = 512
+	options := sd.DefaultOptions
 
-	model, err := sd.NewStableDiffusionAutoModel(options)
+	model, err := sd.NewAutoModel(options)
 	if err != nil {
 		print(err.Error())
 		return
 	}
 	defer model.Close()
 
-	err = model.LoadFromFile("./models/mysd.safetensors")
+	hapi, err := api.NewApi()
+	if err != nil {
+		print(err.Error())
+		return
+	}
+
+	modelPath, err := hapi.Model("justinpinkney/miniSD").Get("miniSD.ckpt")
+	if err != nil {
+		print(err.Error())
+		return
+	}
+
+	err = model.LoadFromFile(modelPath)
 	if err != nil {
 		print(err.Error())
 		return
 	}
 	var writers []io.Writer
-
-	girl, err := filepath.Abs("./assets/a_girl.png")
-	if err != nil {
-		print(err.Error())
-		return
-	}
-
 	filenames := []string{
-		girl,
+		"../assets/love_cat0.png",
 	}
 	for _, filename := range filenames {
 		file, err := os.Create(filename)
@@ -93,49 +100,13 @@ func main() {
 		writers = append(writers, file)
 	}
 
-	err = model.Predict("a girl, high quality", writers)
+	err = model.Predict("british short hair cat, high quality", sd.DefaultFullParams, writers)
 	if err != nil {
 		print(err.Error())
 	}
 }
-
 ```
 
-If `NewStableDiffusionAutoModel` can't automatic loading of dynamic library, please use `NewStableDiffusionModel` method load manually.
-
-```go
-package main
-
-import (
-	"fmt"
-	sd "github.com/seasonjs/stable-diffusion"
-	"runtime"
-)
-
-func getLibrary() string {
-	switch runtime.GOOS {
-	case "darwin":
-		return "./deps/darwin/libstable-diffusion_arm64.dylib"
-	case "linux":
-		return "./deps/linux/libstable-diffusion.so"
-	case "windows":
-		return "./deps/windows/stable-diffusion_avx2_x64.dll"
-	default:
-		panic(fmt.Errorf("GOOS=%s is not supported", runtime.GOOS))
-	}
-}
-func main() {
-	options := sd.DefaultStableDiffusionOptions
-	//It's important to set image size,different model support different size
-	options.Width = 256
-	options.Height = 256
-	model, err := sd.NewStableDiffusionModel(getLibrary(), options)
-	print(model, err)
-	//.... the usage is same as `NewStableDiffusionAutoModel`. they both return `StableDiffusionModel` struct
-
-}
-
-```
 ## Packaging
 
 To ship a working program that includes this AI, you will need to include the following files:

@@ -1,20 +1,16 @@
-package sd
+package sd_test
 
 import (
-	"image"
+	sd "github.com/seasonjs/stable-diffusion"
 	"io"
 	"os"
 	"testing"
 )
 
 func TestNewStableDiffusionAutoModelPredict(t *testing.T) {
-	options := DefaultStableDiffusionOptions
-	options.Width = 256
-	options.Height = 256
-	options.BatchCount = 2
-	//options.SampleSteps = 2
+	options := sd.DefaultOptions
 	t.Log(options)
-	model, err := NewStableDiffusionAutoModel(options)
+	model, err := sd.NewAutoModel(options)
 	if err != nil {
 		t.Error(err)
 		return
@@ -29,8 +25,6 @@ func TestNewStableDiffusionAutoModelPredict(t *testing.T) {
 	filenames := []string{
 		"./assets/love_cat0.png",
 		"./assets/love_cat1.png",
-		//"./assets/love_cat5.png",
-		//"./assets/love_cat6.png"
 	}
 	for _, filename := range filenames {
 		file, err := os.Create(filename)
@@ -42,7 +36,7 @@ func TestNewStableDiffusionAutoModelPredict(t *testing.T) {
 		writers = append(writers, file)
 	}
 
-	err = model.Predict("british short hair cat，high quality", writers)
+	err = model.Predict("british short hair cat，high quality", sd.DefaultFullParams, writers)
 	if err != nil {
 		t.Error(err)
 		return
@@ -50,12 +44,10 @@ func TestNewStableDiffusionAutoModelPredict(t *testing.T) {
 }
 
 func TestNewStableDiffusionAutoModelImagePredict(t *testing.T) {
-	options := DefaultStableDiffusionOptions
-	options.Width = 256
-	options.Height = 256
+	options := sd.DefaultOptions
 	options.VaeDecodeOnly = false
 	t.Log(options)
-	model, err := NewStableDiffusionAutoModel(options)
+	model, err := sd.NewAutoModel(options)
 	if err != nil {
 		t.Error(err)
 		return
@@ -73,44 +65,24 @@ func TestNewStableDiffusionAutoModelImagePredict(t *testing.T) {
 	}
 	defer inFile.Close()
 
-	outfile, err := os.Create("./assets/shoes_cat.png")
-	if err != nil {
-		t.Error(err)
-		return
+	var writers []io.Writer
+	filenames := []string{
+		"./assets/love_cat0_m.png",
+		"./assets/love_cat1_m.png",
+		//"./assets/love_cat5.png",
+		//"./assets/love_cat6.png"
 	}
-	defer outfile.Close()
-
-	err = model.ImagePredict(inFile, "the cat that wears shoe", outfile)
-	if err != nil {
-		t.Error(err)
-		return
+	for _, filename := range filenames {
+		file, err := os.Create(filename)
+		if err != nil {
+			t.Error(err)
+			return
+		}
+		defer file.Close()
+		writers = append(writers, file)
 	}
-}
 
-func TestImageToByte(t *testing.T) {
-	inFile, err := os.Open("./assets/love_cat0.png")
-	if err != nil {
-		t.Error(err)
-		return
-	}
-	defer inFile.Close()
-
-	outfile, err := os.Create("./assets/test_cat0.png")
-	if err != nil {
-		t.Error(err)
-		return
-	}
-	defer outfile.Close()
-
-	decode, _, err := image.Decode(inFile)
-	if err != nil {
-		t.Error(err)
-		return
-	}
-	outputsBytes := imageToBytes(decode)
-
-	outputsImage := bytesToImage(outputsBytes, 256, 256)
-	err = imageToWriter(outputsImage, "PNG", outfile)
+	err = model.ImagePredict(inFile, "the cat that wears shoe", sd.DefaultFullParams, writers)
 	if err != nil {
 		t.Error(err)
 		return

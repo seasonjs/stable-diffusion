@@ -8,11 +8,9 @@ import (
 )
 
 func main() {
-	options := sd.DefaultStableDiffusionOptions
-	options.Width = 512
-	options.Height = 512
+	options := sd.DefaultOptions
 
-	model, err := sd.NewStableDiffusionAutoModel(options)
+	model, err := sd.NewAutoModel(options)
 	if err != nil {
 		print(err.Error())
 		return
@@ -45,7 +43,7 @@ func main() {
 		writers = append(writers, file)
 	}
 
-	err = model.Predict("a girl, high quality", writers)
+	err = model.Predict("a girl, high quality", sd.DefaultFullParams, writers)
 	if err != nil {
 		print(err.Error())
 	}

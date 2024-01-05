@@ -34,24 +34,31 @@ func getDl(gpu bool) []byte {
 		if err != nil {
 			log.Println(err)
 		}
-		log.Print("get gpu info: ", info)
-		// Name
-		// DriverVersion
-		// AdapterCompatibility
-		if info["AdapterCompatibility"] == "NVIDIA" {
+		log.Print("get gpu info: ", info["Name"])
+
+		if strings.Contains(info["Name"], "NVIDIA") {
+			log.Println("Use GPU CUDA12 instead.")
 			return libStableDiffusionCuda12
 		}
+		log.Println("GPU not support, use CPU instead.")
 	}
 
 	if cpu.X86.HasAVX512 {
+		log.Println("Use CPU AVX512 instead.")
 		return libStableDiffusionAvx512
 	}
 
 	if cpu.X86.HasAVX2 {
+		log.Println("Use CPU AVX2 instead.")
 		return libStableDiffusionAvx2
 	}
 
-	return libStableDiffusionAvx
+	if cpu.X86.HasAVX {
+		log.Println("Use CPU AVX instead.")
+		return libStableDiffusionAvx
+	}
+
+	panic("Automatic loading of dynamic library failed, please use `NewRwkvModel` method load manually. ")
 }
 
 func runPowerShellCommand(command string) (string, error) {

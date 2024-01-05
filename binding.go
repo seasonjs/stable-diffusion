@@ -71,19 +71,6 @@ const (
 	COUNT       = 19 // don't use this when specifying a type
 )
 
-type StableDiffusionFullParams struct {
-	params         uintptr
-	negativePrompt string
-	cfgScale       float32
-	width          int
-	height         int
-	sampleMethod   SampleMethod
-	sampleSteps    int
-	seed           int64
-	batchCount     int
-	strength       float32
-}
-
 type CStableDiffusionCtx struct {
 	ctx uintptr
 }
@@ -105,6 +92,8 @@ type CStableDiffusion interface {
 	NewUpscalerCtx(esrganPath string, nThreads int, wtype WType) *CUpScalerCtx
 	FreeUpscalerCtx(ctx *CUpScalerCtx)
 	UpscaleImage(ctx *CUpScalerCtx, img Image, upscaleFactor uint32) Image
+
+	Close() error
 }
 
 type cImage struct {
@@ -141,6 +130,29 @@ type CStableDiffusionImpl struct {
 	freeUpscalerCtx func(ctx uintptr)
 
 	upscale func(ctx uintptr, img uintptr, upscaleFactor uint32) uintptr
+}
+
+func NewCStableDiffusion(libraryPath string) (*CStableDiffusionImpl, error) {
+	libSd, err := openLibrary(libraryPath)
+	if err != nil {
+		return nil, err
+	}
+
+	impl := CStableDiffusionImpl{}
+
+	purego.RegisterLibFunc(&impl.sdSetLogCallback, libSd, "sd_get_system_info")
+
+	purego.RegisterLibFunc(&impl.newSdCtx, libSd, "new_sd_ctx")
+	purego.RegisterLibFunc(&impl.sdSetLogCallback, libSd, "sd_set_log_callback")
+	purego.RegisterLibFunc(&impl.txt2img, libSd, "txt2img")
+	purego.RegisterLibFunc(&impl.img2img, libSd, "img2img")
+	purego.RegisterLibFunc(&impl.freeSdCtx, libSd, "free_sd_ctx")
+
+	purego.RegisterLibFunc(&impl.newUpscalerCtx, libSd, "new_upscaler_ctx")
+	purego.RegisterLibFunc(&impl.freeUpscalerCtx, libSd, "free_upscaler_ctx")
+	purego.RegisterLibFunc(&impl.upscale, libSd, "upscale")
+
+	return &impl, nil
 }
 
 func (c *CStableDiffusionImpl) NewCtx(modelPath string, vaePath string, taesdPath string, loraModelDir string, vaeDecodeOnly bool, vaeTiling bool, freeParamsImmediately bool, nThreads int, wType WType, rngType RNGType, schedule Schedule) *CStableDiffusionCtx {
@@ -195,6 +207,14 @@ func (c *CStableDiffusionImpl) FreeUpscalerCtx(ctx *CUpScalerCtx) {
 	runtime.GC()
 }
 
+func (c *CStableDiffusionImpl) Close() error {
+	if c.libSd != 0 {
+		err := closeLibrary(c.libSd)
+		return err
+	}
+	return nil
+}
+
 func (c *CStableDiffusionImpl) UpscaleImage(ctx *CUpScalerCtx, img Image, upscaleFactor uint32) Image {
 	uptr := c.upscale(ctx.ctx, uintptr(unsafe.Pointer(&img)), upscaleFactor)
 	ptr := *(*unsafe.Pointer)(unsafe.Pointer(&uptr))
@@ -209,29 +229,6 @@ func (c *CStableDiffusionImpl) UpscaleImage(ctx *CUpScalerCtx, img Image, upscal
 		Channel: cimg.channel,
 		Data:    unsafe.Slice((*byte)(dataPtr), cimg.channel*cimg.width*cimg.height),
 	}
-}
-
-func NewCStableDiffusion(libraryPath string) (*CStableDiffusionImpl, error) {
-	libSd, err := openLibrary(libraryPath)
-	if err != nil {
-		return nil, err
-	}
-
-	impl := CStableDiffusionImpl{}
-
-	purego.RegisterLibFunc(&impl.sdSetLogCallback, libSd, "sd_get_system_info")
-
-	purego.RegisterLibFunc(&impl.newSdCtx, libSd, "new_sd_ctx")
-	purego.RegisterLibFunc(&impl.sdSetLogCallback, libSd, "sd_set_log_callback")
-	purego.RegisterLibFunc(&impl.txt2img, libSd, "txt2img")
-	purego.RegisterLibFunc(&impl.img2img, libSd, "img2img")
-	purego.RegisterLibFunc(&impl.freeSdCtx, libSd, "free_sd_ctx")
-
-	purego.RegisterLibFunc(&impl.newUpscalerCtx, libSd, "new_upscaler_ctx")
-	purego.RegisterLibFunc(&impl.freeUpscalerCtx, libSd, "free_upscaler_ctx")
-	purego.RegisterLibFunc(&impl.upscale, libSd, "upscale")
-
-	return &impl, nil
 }
 
 func goString(c uintptr) string {
