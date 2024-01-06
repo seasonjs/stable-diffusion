@@ -12,6 +12,7 @@ import (
 	"io"
 	"log"
 	"os"
+	"path/filepath"
 )
 
 type OutputsImageType string
@@ -61,8 +62,8 @@ var DefaultOptions = Options{
 var DefaultFullParams = FullParams{
 	NegativePrompt:   "out of frame, lowers, text, error, cropped, worst quality, low quality, jpeg artifacts, ugly, duplicate, morbid, mutilated, out of frame, extra fingers, mutated hands, poorly drawn hands, poorly drawn face, mutation, deformed, blurry, dehydrated, bad anatomy, bad proportions, extra limbs, cloned face, disfigured, gross proportions, malformed limbs, missing arms, missing legs, extra arms, extra legs, fused fingers, too many fingers, long neck, username, watermark, signature",
 	CfgScale:         7.0,
-	Width:            500,
-	Height:           500,
+	Width:            512,
+	Height:           512,
 	SampleMethod:     EULER_A,
 	SampleSteps:      20,
 	Strength:         0.4,
@@ -126,7 +127,15 @@ func (sd *Model) LoadFromFile(path string) error {
 		return errors.New("the system cannot find the model file specified")
 	}
 
-	sd.diffusionModelPath = path
+	if !filepath.IsAbs(path) {
+		sd.diffusionModelPath, err = filepath.Abs(path)
+		if err != nil {
+			return err
+		}
+	} else {
+		sd.diffusionModelPath = path
+	}
+
 	ctx := sd.csd.NewCtx(path,
 		sd.options.VaePath,
 		sd.options.TaesdPath,
@@ -171,6 +180,11 @@ func (sd *Model) Predict(prompt string, params FullParams, writer []io.Writer) e
 	if sd.ctx == nil {
 		return errors.New("model not loaded")
 	}
+
+	if params.Width%8 != 0 || params.Height%8 != 0 {
+		return errors.New("width and height must be multiples of 8")
+	}
+
 	images := sd.csd.PredictImage(
 		sd.ctx,
 		prompt,
@@ -254,6 +268,10 @@ func (sd *Model) UpscaleImage(reader io.Reader, esrganPath string, upscaleFactor
 	outputsImage := bytesToImage(img.Data, int(img.Width), int(img.Height))
 	err = imageToWriter(outputsImage, PNG, writer)
 	return err
+}
+
+func (sd *Model) SetLogCallback(cb CLogCallback) {
+	sd.csd.SetLogCallBack(cb)
 }
 
 func (sd *Model) Close() error {
