@@ -118,9 +118,9 @@ func TestNewCStableDiffusionText2Img(t *testing.T) {
 	ctx := diffusion.NewCtx("./models/miniSD.ckpt", "", "", "", false, false, true, 4, sd.F16, sd.CUDA_RNG, sd.DEFAULT)
 	defer diffusion.FreeCtx(ctx)
 
-	images := diffusion.PredictImage(ctx, "british short hair cat, high quality", "", 0, 7.0, 256, 256, sd.EULER_A, 10, 42, 1)
+	images := diffusion.PredictImage(ctx, "british short hair cat, high quality", "", 0, 7.0, 256, 256, sd.EULER_A, 10, 43, 1)
 
-	writeToFile(t, images[0].Data, 256, 256, "./assets/test.png")
+	writeToFile(t, images[0].Data, 256, 256, "./assets/love_cat1.png")
 }
 
 func TestNewCStableDiffusionImg2Img(t *testing.T) {

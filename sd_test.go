@@ -26,7 +26,7 @@ func TestNewStableDiffusionAutoModelPredict(t *testing.T) {
 	}
 	var writers []io.Writer
 	filenames := []string{
-		"./assets/love_cat0.png",
+		"./assets/love_cat2.png",
 	}
 	for _, filename := range filenames {
 		file, err := os.Create(filename)
@@ -42,6 +42,7 @@ func TestNewStableDiffusionAutoModelPredict(t *testing.T) {
 	params.BatchCount = 1
 	params.Width = 256
 	params.Height = 256
+	params.NegativePrompt = ""
 	err = model.Predict("british short hair cat, high quality", params, writers)
 	if err != nil {
 		t.Error(err)
