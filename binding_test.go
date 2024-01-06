@@ -1,10 +1,11 @@
 // Copyright (c) seasonjs. All rights reserved.
 // Licensed under the MIT License. See License.txt in the project root for license information.
 
-package sd
+package sd_test
 
 import (
 	"fmt"
+	sd "github.com/seasonjs/stable-diffusion"
 	"image"
 	"image/color"
 	"image/png"
@@ -16,11 +17,11 @@ import (
 func getLibrary() string {
 	switch runtime.GOOS {
 	case "darwin":
-		return "./deps/darwin/libstable-diffusion_arm64.dylib"
+		return "./deps/darwin/libsd-abi.dylib"
 	case "linux":
 		return "./deps/linux/libstable-diffusion.so"
 	case "windows":
-		return "./deps/windows/stable-diffusion_avx2.dll"
+		return "./deps/windows/sd-abi_avx2.dll"
 	default:
 		panic(fmt.Errorf("GOOS=%s is not supported", runtime.GOOS))
 	}
@@ -73,7 +74,7 @@ func writeToFile(t *testing.T, byteData []byte, height int, width int, outputPat
 	t.Log("Image saved at", outputPath)
 }
 
-func readFromFile(t *testing.T, path string) []byte {
+func readFromFile(t *testing.T, path string) *sd.Image {
 	file, err := os.Open(path)
 	if err != nil {
 		t.Error(err)
@@ -98,36 +99,44 @@ func readFromFile(t *testing.T, path string) []byte {
 			img[idx+2] = byte(b)
 		}
 	}
-	return img
+	return &sd.Image{
+		Width:  uint32(width),
+		Height: uint32(height),
+		Data:   img,
+	}
 }
 
-//func TestStableDiffusionTextToImage(t *testing.T) {
-//	sd, err := NewCStableDiffusion(getLibrary())
-//	if err != nil {
-//		t.Log(err)
-//	}
-//	ctx := sd.NewStableDiffusionCtx(8, true, true, "", CUDA_RNG)
-//	defer ctx.Close()
-//	ctx.StableDiffusionLoadFromFile("./models/miniSD-ggml-model-q5_0.bin", DEFAULT)
-//	data, _ := ctx.StableDiffusionTextToImage("A lovely cat, high quality", "", 7.0, 256, 256, EULER_A, 20, 42, 1)
-//	writeToFile(t, data[1], 256, 256, "./data/love_cat2.png")
-//}
-//
-//func TestStableDiffusionImgToImage(t *testing.T) {
-//	sd, err := NewCStableDiffusion(getLibrary())
-//	if err != nil {
-//		t.Log(err)
-//	}
-//	ctx := sd.NewStableDiffusionCtx(8, false, true, "", CUDA_RNG)
-//	defer ctx.Close()
-//	ctx.StableDiffusionLoadFromFile("./models/miniSD-ggml-model-q5_0.bin", DEFAULT)
-//	img := readFromFile(t, "./data/love_cat2.png")
-//	data, _ := ctx.StableDiffusionImageToImage(img, "A lovely cat that theme pink", "", 7.0, 256, 256, EULER_A, 20, 0.4, 42)
-//	writeToFile(t, data, 256, 256, "./data/output1.png")
-//}
-//
-//func TestBase64(t *testing.T) {
-//	img := readFromFile(t, "./assets/love_cat2.png")
-//	imgBase64 := base64.StdEncoding.EncodeToString(img)
-//	t.Log(imgBase64)
-//}
+func TestNewCStableDiffusionText2Img(t *testing.T) {
+	diffusion, err := sd.NewCStableDiffusion(getLibrary())
+	if err != nil {
+		t.Error(err)
+		return
+	}
+	diffusion.SetLogCallBack(func(level sd.LogLevel, text string) {
+		fmt.Printf("%s", text)
+	})
+	ctx := diffusion.NewCtx("./models/miniSD.ckpt", "", "", "", false, false, true, 4, sd.F16, sd.CUDA_RNG, sd.DEFAULT)
+	defer diffusion.FreeCtx(ctx)
+
+	images := diffusion.PredictImage(ctx, "british short hair cat, high quality", "", 0, 7.0, 256, 256, sd.EULER_A, 10, 43, 1)
+
+	writeToFile(t, images[0].Data, 256, 256, "./assets/love_cat1.png")
+}
+
+func TestNewCStableDiffusionImg2Img(t *testing.T) {
+	diffusion, err := sd.NewCStableDiffusion(getLibrary())
+	if err != nil {
+		t.Error(err)
+		return
+	}
+	diffusion.SetLogCallBack(func(level sd.LogLevel, text string) {
+		fmt.Printf("%s", text)
+	})
+	ctx := diffusion.NewCtx("./models/miniSD.ckpt", "", "", "", false, false, true, -1, sd.F16, sd.CUDA_RNG, sd.DEFAULT)
+	defer diffusion.FreeCtx(ctx)
+
+	img := readFromFile(t, "./assets/test.png")
+	images := diffusion.ImagePredictImage(ctx, *img, "cat wears shoes, high quality", "", 0, 7.0, 256, 256, sd.EULER_A, 20, 0.4, 42, 1)
+
+	writeToFile(t, images[0].Data, 256, 256, "./assets/test1.png")
+}
