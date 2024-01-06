@@ -53,7 +53,6 @@ var DefaultOptions = Options{
 	Threads:               -1, // auto
 	VaeDecodeOnly:         true,
 	FreeParamsImmediately: true,
-	LoraModelDir:          "",
 	RngType:               CUDA_RNG,
 	Wtype:                 F32,
 	Schedule:              DEFAULT,
@@ -79,6 +78,8 @@ type Model struct {
 	isAutoLoad         bool
 	dylibPath          string
 	diffusionModelPath string
+	esrganPath         string
+	upscalerCtx        *CUpScalerCtx
 }
 
 func NewAutoModel(options Options) (*Model, error) {
@@ -240,10 +241,30 @@ func (sd *Model) ImagePredict(reader io.Reader, prompt string, params FullParams
 	return nil
 }
 
+func (sd *Model) UpscaleImage(reader io.Reader, esrganPath string, upscaleFactor uint32, writer io.Writer) error {
+	if sd.upscalerCtx == nil {
+		sd.upscalerCtx = sd.csd.NewUpscalerCtx(esrganPath, sd.options.Threads, sd.options.Wtype)
+	}
+	decode, _, err := image.Decode(reader)
+	if err != nil {
+		return err
+	}
+	initImage := imageToBytes(decode)
+	img := sd.csd.UpscaleImage(sd.upscalerCtx, initImage, upscaleFactor)
+	outputsImage := bytesToImage(img.Data, int(img.Width), int(img.Height))
+	err = imageToWriter(outputsImage, PNG, writer)
+	return err
+}
+
 func (sd *Model) Close() error {
 	if sd.ctx != nil {
 		sd.csd.FreeCtx(sd.ctx)
 		sd.ctx = nil
+	}
+
+	if sd.upscalerCtx != nil {
+		sd.csd.FreeUpscalerCtx(sd.upscalerCtx)
+		sd.upscalerCtx = nil
 	}
 
 	if sd.csd != nil {
@@ -319,19 +340,19 @@ func imageToWriter(image image.Image, imageType OutputsImageType, writer io.Writ
 	return nil
 }
 
-func chunkBytes(data []byte, chunks int) [][]byte {
-	length := len(data)
-	chunkSize := (length + chunks - 1) / chunks
-	result := make([][]byte, chunks)
-
-	for i := 0; i < chunks; i++ {
-		start := i * chunkSize
-		end := (i + 1) * chunkSize
-		if end > length {
-			end = length
-		}
-		result[i] = data[start:end:end]
-	}
-
-	return result
-}
+//func chunkBytes(data []byte, chunks int) [][]byte {
+//	length := len(data)
+//	chunkSize := (length + chunks - 1) / chunks
+//	result := make([][]byte, chunks)
+//
+//	for i := 0; i < chunks; i++ {
+//		start := i * chunkSize
+//		end := (i + 1) * chunkSize
+//		if end > length {
+//			end = length
+//		}
+//		result[i] = data[start:end:end]
+//	}
+//
+//	return result
+//}

@@ -89,7 +89,7 @@ type CStableDiffusion interface {
 	GetSystemInfo() string
 	FreeCtx(ctx *CStableDiffusionCtx)
 
-	NewUpscalerCtx(esrganPath string, nThreads int, wtype WType) *CUpScalerCtx
+	NewUpscalerCtx(esrganPath string, nThreads int, wType WType) *CUpScalerCtx
 	FreeUpscalerCtx(ctx *CUpScalerCtx)
 	UpscaleImage(ctx *CUpScalerCtx, img Image, upscaleFactor uint32) Image
 
@@ -192,8 +192,8 @@ func (c *CStableDiffusionImpl) FreeCtx(ctx *CStableDiffusionCtx) {
 	runtime.GC()
 }
 
-func (c *CStableDiffusionImpl) NewUpscalerCtx(esrganPath string, nThreads int, wtype WType) *CUpScalerCtx {
-	ctx := c.newUpscalerCtx(esrganPath, nThreads, int(wtype))
+func (c *CStableDiffusionImpl) NewUpscalerCtx(esrganPath string, nThreads int, wType WType) *CUpScalerCtx {
+	ctx := c.newUpscalerCtx(esrganPath, nThreads, int(wType))
 
 	return &CUpScalerCtx{ctx: ctx}
 }
