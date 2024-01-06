@@ -3,9 +3,9 @@ module github.com/seasonjs/stable-diffusion
 go 1.21
 
 require (
-	github.com/ebitengine/purego v0.5.1
+	github.com/ebitengine/purego v0.6.0-alpha.2.0.20231129131118-33b97fd6a58b
 	github.com/seasonjs/hf-hub v0.0.3
-	golang.org/x/sys v0.15.0
+	golang.org/x/sys v0.16.0
 )
 
 require (

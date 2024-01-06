@@ -3,23 +3,26 @@ package main
 import (
 	sd "github.com/seasonjs/stable-diffusion"
 	"io"
+	"log"
 	"os"
 	"path/filepath"
 )
 
 func main() {
-	options := sd.DefaultStableDiffusionOptions
-	options.Width = 512
-	options.Height = 512
+	options := sd.DefaultOptions
 
-	model, err := sd.NewStableDiffusionAutoModel(options)
+	model, err := sd.NewAutoModel(options)
 	if err != nil {
 		print(err.Error())
 		return
 	}
 	defer model.Close()
 
-	err = model.LoadFromFile("./models/mysd.safetensors")
+	model.SetLogCallback(func(level sd.LogLevel, msg string) {
+		log.Println(msg)
+	})
+
+	err = model.LoadFromFile("./models/miniSD.ckpt")
 	if err != nil {
 		print(err.Error())
 		return
@@ -45,8 +48,14 @@ func main() {
 		writers = append(writers, file)
 	}
 
-	err = model.Predict("a girl, high quality", writers)
+	params := sd.DefaultFullParams
+	params.BatchCount = 1
+	params.Width = 256
+	params.Height = 256
+
+	err = model.Predict("a girl, high quality", params, writers)
 	if err != nil {
 		print(err.Error())
+		return
 	}
 }
