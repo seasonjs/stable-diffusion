@@ -7,11 +7,12 @@ package sd
 
 import (
 	_ "embed"
-	"errors"
-	"golang.org/x/sys/cpu"
+	"encoding/json"
 	"log"
 	"os/exec"
 	"strings"
+
+	"golang.org/x/sys/cpu"
 )
 
 //go:embed deps/windows/sd-abi_avx2.dll
@@ -30,16 +31,18 @@ var libName = "stable-diffusion-*.dll"
 
 func getDl(gpu bool) []byte {
 	if gpu {
-		info, err := getGPUInfo()
+		info, err := NewGPU()
 		if err != nil {
 			log.Println(err)
 		}
-		log.Print("get gpu info: ", info["Name"])
+		driver := info.Cuda()
+		log.Print("get gpu info: ", driver.Name)
 
-		if strings.Contains(info["Name"], "NVIDIA") {
-			log.Println("Use GPU CUDA12 instead.")
+		if driver.Available() {
+			log.Println("Use GPU CUDA instead.")
 			return libStableDiffusionCuda12
 		}
+
 		log.Println("GPU not support, use CPU instead.")
 	}
 
@@ -61,45 +64,87 @@ func getDl(gpu bool) []byte {
 	panic("Automatic loading of dynamic library failed, please use `NewRwkvModel` method load manually. ")
 }
 
-func runPowerShellCommand(command string) (string, error) {
-	cmd := exec.Command("powershell", "-Command", command)
-
-	// execute the command and get the output
-	output, err := cmd.Output()
-	if err != nil {
-		return "", err
-	}
-
-	return string(output), nil
+type Driver struct {
+	Name                 string `json:"Name"`
+	AdapterCompatibility string `json:"AdapterCompatibility"`
+	AdapterRAM           int64  `json:"AdapterRAM"`
 }
 
-func getGPUInfo() (map[string]string, error) {
-	psCommand := "Get-WmiObject Win32_VideoController"
-	output, err := runPowerShellCommand(psCommand)
+func (d *Driver) Available() bool {
+	return d.Name != "" && d.AdapterCompatibility != "" && d.AdapterRAM != 0
+}
+
+// GPU 类用于管理显卡信息
+type GPU struct {
+	drivers []Driver
+	cuda    []Driver
+	rocm    []Driver
+}
+
+func NewGPU() (*GPU, error) {
+	cmd := exec.Command("powershell", `
+        $graphicsCards = Get-WmiObject Win32_VideoController
+        $graphicsArray = @()
+		$graphicsEmpty = @{
+			'Name'                 = ''
+			'AdapterCompatibility' = ''
+			'AdapterRAM'           = 0
+		}
+		$graphicsArray += $graphicsEmpty
+        foreach ($card in $graphicsCards) {
+            $graphicsInfo = @{
+                'Name'                 = $card.Caption
+                'AdapterCompatibility' = $card.VideoProcessor
+                'AdapterRAM'           = $card.AdapterRAM
+            }
+            $graphicsArray += $graphicsInfo
+        }
+        $graphicsArray | ConvertTo-Json
+    `)
+
+	output, err := cmd.CombinedOutput()
 	if err != nil {
 		return nil, err
 	}
-	infos := strings.Split(output, "\r\n")
-	result := make(map[string]string, len(infos))
-	for _, line := range infos {
-		parts := strings.SplitN(line, ":", 2)
-		if len(parts) == 2 {
-			key := strings.TrimSpace(parts[0])
-			if strings.Contains(key, "__") || strings.Contains(key, "/") {
-				continue
-			}
-			value := strings.TrimSpace(parts[1])
-			if len(value) == 0 {
-				continue
-			}
-			if len(value) == 0 {
-				continue
-			}
-			result[key] = value
+
+	var drivers []Driver
+	err = json.Unmarshal(output, &drivers)
+	if err != nil {
+		return nil, err
+	}
+
+	cudaSupport := make([]Driver, 0)
+	rocmSupport := make([]Driver, 0)
+
+	for _, driver := range drivers {
+		if strings.Contains(strings.ToUpper(driver.Name), "NVIDIA") {
+			cudaSupport = append(cudaSupport, driver)
+		} else if strings.Contains(strings.ToUpper(driver.Name), "AMD") {
+			rocmSupport = append(rocmSupport, driver)
 		}
 	}
-	if len(result["Name"]) > 0 {
-		return result, nil
+
+	return &GPU{
+		drivers: drivers,
+		cuda:    cudaSupport,
+		rocm:    rocmSupport,
+	}, nil
+}
+
+func (g *GPU) Cuda() *Driver {
+	if len(g.cuda) > 0 {
+		return &g.cuda[0]
 	}
-	return nil, errors.New("no gpu found")
+	return &Driver{}
+}
+
+func (g *GPU) ROCm() *Driver {
+	if len(g.rocm) > 0 {
+		return &g.rocm[0]
+	}
+	return &Driver{}
+}
+
+func (g *GPU) Info() []Driver {
+	return g.drivers
 }
