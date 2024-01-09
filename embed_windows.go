@@ -8,10 +8,11 @@ package sd
 import (
 	_ "embed"
 	"encoding/json"
-	"golang.org/x/sys/cpu"
 	"log"
 	"os/exec"
 	"strings"
+
+	"golang.org/x/sys/cpu"
 )
 
 //go:embed deps/windows/sd-abi_avx2.dll
@@ -63,39 +64,33 @@ func getDl(gpu bool) []byte {
 	panic("Automatic loading of dynamic library failed, please use `NewRwkvModel` method load manually. ")
 }
 
-func runPowerShellCommand(command string) (string, error) {
-	cmd := exec.Command("powershell", "-Command", command)
-
-	// execute the command and get the output
-	output, err := cmd.Output()
-	if err != nil {
-		return "", err
-	}
-
-	return string(output), nil
-}
-
 type Driver struct {
 	Name                 string `json:"Name"`
 	AdapterCompatibility string `json:"AdapterCompatibility"`
-	AdapterRAM           string `json:"AdapterRAM"`
+	AdapterRAM           int64  `json:"AdapterRAM"`
 }
 
 func (d *Driver) Available() bool {
-	return d.Name != "" && d.AdapterCompatibility != "" && d.AdapterRAM != ""
+	return d.Name != "" && d.AdapterCompatibility != "" && d.AdapterRAM != 0
 }
 
 // GPU 类用于管理显卡信息
 type GPU struct {
 	drivers []Driver
-	cuda    *Driver
-	rocm    *Driver
+	cuda    []Driver
+	rocm    []Driver
 }
 
 func NewGPU() (*GPU, error) {
 	cmd := exec.Command("powershell", `
         $graphicsCards = Get-WmiObject Win32_VideoController
         $graphicsArray = @()
+		$graphicsEmpty = @{
+			'Name'                 = ''
+			'AdapterCompatibility' = ''
+			'AdapterRAM'           = 0
+		}
+		$graphicsArray += $graphicsEmpty
         foreach ($card in $graphicsCards) {
             $graphicsInfo = @{
                 'Name'                 = $card.Caption
@@ -118,14 +113,14 @@ func NewGPU() (*GPU, error) {
 		return nil, err
 	}
 
-	cudaSupport := &Driver{}
-	rocmSupport := &Driver{}
+	cudaSupport := make([]Driver, 0)
+	rocmSupport := make([]Driver, 0)
 
 	for _, driver := range drivers {
 		if strings.Contains(strings.ToUpper(driver.Name), "NVIDIA") {
-			cudaSupport = &driver
+			cudaSupport = append(cudaSupport, driver)
 		} else if strings.Contains(strings.ToUpper(driver.Name), "AMD") {
-			rocmSupport = &driver
+			rocmSupport = append(rocmSupport, driver)
 		}
 	}
 
@@ -137,11 +132,17 @@ func NewGPU() (*GPU, error) {
 }
 
 func (g *GPU) Cuda() *Driver {
-	return g.cuda
+	if len(g.cuda) > 0 {
+		return &g.cuda[0]
+	}
+	return &Driver{}
 }
 
 func (g *GPU) ROCm() *Driver {
-	return g.rocm
+	if len(g.rocm) > 0 {
+		return &g.rocm[0]
+	}
+	return &Driver{}
 }
 
 func (g *GPU) Info() []Driver {
