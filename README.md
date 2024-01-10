@@ -21,11 +21,13 @@ go get github.com/seasonjs/stable-diffusion
 
 See `deps` folder for dylib compatibility, push request is welcome.
 
-| platform | x32         | x64                     | arm         | cuda           |
-|----------|-------------|-------------------------|-------------|----------------|
-| windows  | not support | support avx/avx2/avx512 | not support | support cuda12 |
-| linux    | not support | support                 | not support |                |
-| darwin   | not support | support                 | support     |                |
+Windows NVIDIA GPU User may need check [cuda architecture](https://developer.nvidia.com/cuda-gpus) to get more information.
+
+| platform | x32         | x64                     | arm         | AMD/ROCM    | NVIDIA/CUDA    |
+|----------|-------------|-------------------------|-------------|-------------|----------------|
+| windows  | not support | support avx/avx2/avx512 | not support | not support | cuda12 support |
+| linux    | not support | support                 | not support | not support | not support    |
+| darwin   | not support | support                 | support     | not support | not support    |
 
 ## AutoModel Dynamic Libraries Disclaimer
 
@@ -114,6 +116,7 @@ To ship a working program that includes this AI, you will need to include the fo
 * libstable-diffusion.dylib / libstable-diffusion.so / stable-diffusion.dll (buildin)
 * the model file
 * the tokenizer file (buildin)
+* cuda runtime library, if you use cuda
 
 ## Low level API
 
