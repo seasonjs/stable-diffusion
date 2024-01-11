@@ -11,6 +11,7 @@ import (
 	"log"
 	"os/exec"
 	"strings"
+	"syscall"
 
 	"golang.org/x/sys/cpu"
 )
@@ -101,6 +102,12 @@ func NewGPU() (*GPU, error) {
         }
         $graphicsArray | ConvertTo-Json
     `)
+
+	cmd.SysProcAttr = &syscall.SysProcAttr{
+		HideWindow: true,
+		//https://learn.microsoft.com/en-us/windows/win32/procthread/process-creation-flags
+		CreationFlags: 0x08000000,
+	}
 
 	output, err := cmd.CombinedOutput()
 	if err != nil {
