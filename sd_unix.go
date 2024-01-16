@@ -1,18 +1,42 @@
 // Copyright (c) seasonjs. All rights reserved.
 // Licensed under the MIT License. See License.txt in the project root for license information.
 
-//go:build darwin || linux
+//go:build (darwin || linux) && cgo
 
 package sd
 
 import (
-	"github.com/ebitengine/purego"
+	"errors"
+	"unsafe"
 )
 
+/*
+#include <dlfcn.h>
+
+void *Dlopen(const char *libPath) {
+    void *handle = dlopen(libPath, RTLD_GLOBAL | RTLD_NOW);
+    if (!handle) {
+        return NULL;
+    }
+
+    return handle;
+}
+
+void closeLibrary(void *handle) {
+    dlclose(handle);
+}
+*/
+import "C"
+
 func openLibrary(name string) (uintptr, error) {
-	return purego.Dlopen(name, purego.RTLD_NOW|purego.RTLD_GLOBAL)
+	handle := C.Dlopen(C.CString(name))
+	if handle == nil {
+		return 0, errors.New("failed to open library")
+	}
+	return uintptr(handle), nil
 }
 
 func closeLibrary(handle uintptr) error {
-	return purego.Dlclose(handle)
+	C.closeLibrary(*(*unsafe.Pointer)(unsafe.Pointer(&handle)))
+	return nil
 }
