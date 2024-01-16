@@ -5,6 +5,7 @@ package sd
 
 import (
 	"github.com/ebitengine/purego"
+	"log"
 	"runtime"
 	"unsafe"
 )
@@ -103,6 +104,13 @@ type cImage struct {
 	data    uintptr
 }
 
+type cDarwinImage struct {
+	width   uint32
+	height  uint32
+	channel uint32
+	data    *byte
+}
+
 type Image struct {
 	Width   uint32
 	Height  uint32
@@ -121,7 +129,9 @@ type CStableDiffusionImpl struct {
 
 	txt2img func(ctx uintptr, prompt string, negativePrompt string, clipSkip int, cfgScale float32, width int, height int, sampleMethod int, sampleSteps int, seed int64, batchCount int) uintptr
 
-	img2img func(ctx uintptr, img uintptr, prompt string, negativePrompt string, clipSkip int, cfgScale float32, width int, height int, sampleMethod int, sampleSteps int, strength float32, seed int64, batchCount int) uintptr
+	img2imgWin func(ctx uintptr, img uintptr, prompt string, negativePrompt string, clipSkip int, cfgScale float32, width int, height int, sampleMethod int, sampleSteps int, strength float32, seed int64, batchCount int) uintptr
+
+	img2imgMac func(ctx uintptr, img cDarwinImage, prompt string, negativePrompt string, clipSkip int, cfgScale float32, width int, height int, sampleMethod int, sampleSteps int, strength float32, seed int64, batchCount int) uintptr
 
 	freeSdCtx func(ctx uintptr)
 
@@ -145,9 +155,14 @@ func NewCStableDiffusion(libraryPath string) (*CStableDiffusionImpl, error) {
 	purego.RegisterLibFunc(&impl.newSdCtx, libSd, "new_sd_ctx")
 	purego.RegisterLibFunc(&impl.sdSetLogCallback, libSd, "sd_set_log_callback")
 	purego.RegisterLibFunc(&impl.txt2img, libSd, "txt2img")
-	purego.RegisterLibFunc(&impl.img2img, libSd, "img2img")
+	purego.RegisterLibFunc(&impl.img2imgWin, libSd, "img2img")
+	if runtime.GOOS == "darwin" {
+		purego.RegisterLibFunc(&impl.img2imgMac, libSd, "img2img")
+	}
+	if runtime.GOOS == "windows" || runtime.GOOS == "linux" {
+		purego.RegisterLibFunc(&impl.img2imgWin, libSd, "img2img")
+	}
 	purego.RegisterLibFunc(&impl.freeSdCtx, libSd, "free_sd_ctx")
-
 	purego.RegisterLibFunc(&impl.newUpscalerCtx, libSd, "new_upscaler_ctx")
 	purego.RegisterLibFunc(&impl.freeUpscalerCtx, libSd, "free_upscaler_ctx")
 	purego.RegisterLibFunc(&impl.upscale, libSd, "upscale")
@@ -168,8 +183,25 @@ func (c *CStableDiffusionImpl) PredictImage(ctx *CStableDiffusionCtx, prompt str
 }
 
 func (c *CStableDiffusionImpl) ImagePredictImage(ctx *CStableDiffusionCtx, img Image, prompt string, negativePrompt string, clipSkip int, cfgScale float32, width int, height int, sampleMethod SampleMethod, sampleSteps int, strength float32, seed int64, batchCount int) []Image {
-	images := c.img2img(ctx.ctx, uintptr(unsafe.Pointer(&img)), prompt, negativePrompt, clipSkip, cfgScale, width, height, int(sampleMethod), sampleSteps, strength, seed, batchCount)
-	return goImageSlice(images, batchCount)
+	log.Print("ImagePredictImage is an hack method to make it work on windows and macos, no promise it will work on linux")
+	// need feedback
+	if runtime.GOOS == "windows" || runtime.GOOS == "linux" {
+		log.Print("ImagePredictImage on windows detected")
+		images := c.img2imgWin(ctx.ctx, uintptr(unsafe.Pointer(&img)), prompt, negativePrompt, clipSkip, cfgScale, width, height, int(sampleMethod), sampleSteps, strength, seed, batchCount)
+		return goImageSlice(images, batchCount)
+	}
+	if runtime.GOOS == "darwin" {
+		log.Print("ImagePredictImage on darwin detected")
+		ci := cDarwinImage{
+			width:   img.Width,
+			height:  img.Height,
+			channel: img.Channel,
+			data:    &img.Data[0],
+		}
+		images := c.img2imgMac(ctx.ctx, ci, prompt, negativePrompt, clipSkip, cfgScale, width, height, int(sampleMethod), sampleSteps, strength, seed, batchCount)
+		return goImageSlice(images, batchCount)
+	}
+	return nil
 }
 
 func (c *CStableDiffusionImpl) SetLogCallBack(cb CLogCallback) {
