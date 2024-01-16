@@ -5,7 +5,12 @@
       <configuration sdkName="Python 3.11 (stable-diffusion)" />
     </facet>
   </component>
-  <component name="Go" enabled="true" />
+  <component name="Go" enabled="true">
+    <buildTags>
+      <option name="os" value="windows" />
+      <option name="arch" value="amd64" />
+    </buildTags>
+  </component>
   <component name="NewModuleRootManager">
     <content url="file://$MODULE_DIR$">
       <excludeFolder url="file://$MODULE_DIR$/venv" />

@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project version="4">
+  <component name="WebServers">
+    <option name="servers">
+      <webServer id="77340b47-5e04-43c2-ac19-e1432558082f" name="192.168.8.16">
+        <fileTransfer rootFolder="/C:/Users/cyberhan" accessType="SFTP" host="192.168.8.168" port="22" sshConfigId="23e06eb2-4a43-4987-82d7-253fdd7c4c03" sshConfig="cyberhan@192.168.8.168:22 password">
+          <advancedOptions>
+            <advancedOptions dataProtectionLevel="Private" passiveMode="true" shareSSLContext="true" />
+          </advancedOptions>
+        </fileTransfer>
+      </webServer>
+    </option>
+  </component>
+</project>

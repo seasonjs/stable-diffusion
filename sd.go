@@ -317,9 +317,10 @@ func imageToBytes(decode image.Image) Image {
 		}
 	}
 	return Image{
-		Width:  uint32(width),
-		Height: uint32(height),
-		Data:   bytesImg,
+		Width:   uint32(width),
+		Height:  uint32(height),
+		Data:    bytesImg,
+		Channel: 3,
 	}
 }
 
