@@ -257,8 +257,17 @@ func (sd *Model) ImagePredict(reader io.Reader, prompt string, params FullParams
 
 func (sd *Model) UpscaleImage(reader io.Reader, esrganPath string, upscaleFactor uint32, writer io.Writer) error {
 	if sd.upscalerCtx == nil {
+		sd.esrganPath = esrganPath
 		sd.upscalerCtx = sd.csd.NewUpscalerCtx(esrganPath, sd.options.Threads, sd.options.Wtype)
 	}
+
+	if sd.esrganPath != esrganPath {
+		if sd.upscalerCtx != nil {
+			sd.csd.FreeUpscalerCtx(sd.upscalerCtx)
+		}
+		sd.upscalerCtx = sd.csd.NewUpscalerCtx(esrganPath, sd.options.Threads, sd.options.Wtype)
+	}
+
 	decode, _, err := image.Decode(reader)
 	if err != nil {
 		return err
