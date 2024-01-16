@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project version="4">
+  <component name="RemoteTargetsManager">
+    <targets>
+      <target name="cyberhan@192.168.8.168:22" type="ssh/sftp" uuid="d5ed3230-c8f5-4935-837f-f91a89490256">
+        <config>
+          <option name="projectRootOnTarget" value="/C:/Users/cyberhan/Documents/stable-diffusion" />
+          <option name="serverName" value="cyberhan@192.168.8.168:22 password" />
+        </config>
+        <ContributedStateBase type="GoLanguageRuntime">
+          <config>
+            <option name="goPath" value="/C:/Users/cyberhan/go" />
+            <option name="goRoot" value="/C:/Program Files/Go/bin/go.exe" />
+          </config>
+        </ContributedStateBase>
+        <ContributedStateBase type="GoLanguageRuntime">
+          <config />
+        </ContributedStateBase>
+      </target>
+    </targets>
+  </component>
+</project>

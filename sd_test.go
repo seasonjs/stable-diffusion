@@ -60,6 +60,9 @@ func TestNewStableDiffusionAutoModelImagePredict(t *testing.T) {
 		return
 	}
 	defer model.Close()
+	model.SetLogCallback(func(level sd.LogLevel, msg string) {
+		t.Log(msg)
+	})
 	err = model.LoadFromFile("./models/mysd.safetensors")
 	if err != nil {
 		t.Error(err)
@@ -75,7 +78,7 @@ func TestNewStableDiffusionAutoModelImagePredict(t *testing.T) {
 	var writers []io.Writer
 	filenames := []string{
 		"./assets/love_cat0_m.png",
-		"./assets/love_cat1_m.png",
+		//"./assets/love_cat1_m.png",
 		//"./assets/love_cat5.png",
 		//"./assets/love_cat6.png"
 	}
@@ -88,8 +91,12 @@ func TestNewStableDiffusionAutoModelImagePredict(t *testing.T) {
 		defer file.Close()
 		writers = append(writers, file)
 	}
-
-	err = model.ImagePredict(inFile, "the cat that wears shoe", sd.DefaultFullParams, writers)
+	params := sd.DefaultFullParams
+	params.BatchCount = 1
+	params.Width = 256
+	params.Height = 256
+	params.NegativePrompt = ""
+	err = model.ImagePredict(inFile, "dogs", params, writers)
 	if err != nil {
 		t.Error(err)
 		return
