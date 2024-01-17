@@ -7,9 +7,60 @@ package sd
 
 /*
 #cgo CFLAGS: -I deps
+//todo: avoid warning
+#ifdef  __WIN32__
+#include "windows.h"
+#define dlsym GetProcAddress
+#else
+#include <dlfcn.h>
+#endif
 #include "deps/stable-diffusion.h"
 
-void *new_sd_ctx_func(void* handle,
+typedef sd_ctx_t* (*new_sd_ctx_t)(const char* model_path,
+								 const char* vae_path,
+								 const char* taesd_path,
+								 const char* lora_model_dir,
+								 bool vae_decode_only,
+								 bool vae_tiling,
+								 bool free_params_immediately,
+								 int n_threads,
+								 enum sd_type_t wtype,
+								 enum rng_type_t rng_type,
+								 enum schedule_t s);
+
+typedef sd_image_t* (*txt2img_t)(sd_ctx_t* sd_ctx,
+                           const char* prompt,
+                           const char* negative_prompt,
+                           int clip_skip,
+                           float cfg_scale,
+                           int width,
+                           int height,
+                           enum sample_method_t sample_method,
+                           int sample_steps,
+                           int64_t seed,
+                           int batch_count);
+
+typedef sd_image_t* (*img2img_t)(sd_ctx_t* sd_ctx,
+                           sd_image_t init_image,
+                           const char* prompt,
+                           const char* negative_prompt,
+                           int clip_skip,
+                           float cfg_scale,
+                           int width,
+                           int height,
+                           enum sample_method_t sample_method,
+                           int sample_steps,
+                           float strength,
+                           int64_t seed,
+                           int batch_count);
+
+typedef upscaler_ctx_t* (*new_upscaler_ctx_t)(const char* esrgan_path,
+                                        int n_threads,
+                                        enum sd_type_t wtype);
+
+typedef sd_image_t (*upscale_t)(upscaler_ctx_t* upscaler_ctx, sd_image_t input_image, uint32_t upscale_factor);
+
+sd_ctx_t *new_sd_ctx_func(void* handle,
 					  const char *modelPath,
 					  const char *vaePath,
 					  const char *taesdPath,
@@ -22,17 +73,17 @@ void *new_sd_ctx_func(void* handle,
 					  int rngType,
 					  int schedule)
 {
-	if (!libHandle) {
+	if (!handle) {
 		return NULL;
 	}
-	void (*new_sd_ctx)() = dlsym(handle, "new_sd_ctx");
+	new_sd_ctx_t new_sd_ctx =(new_sd_ctx_t) dlsym(handle, "new_sd_ctx");
 	if (!new_sd_ctx) {
 		return NULL;
 	}
 	return new_sd_ctx(modelPath, vaePath, taesdPath, loraModelDir, vaeDecodeOnly, vaeTiling, freeParamsImmediately, nThreads, wType, rngType, schedule);
 }
 
-void *txt2img_func(void* handle,
+sd_image_t *txt2img_func(void* handle,
 				   void *ctx,
 				   const char *prompt,
 				   const char *negativePrompt,
@@ -45,19 +96,20 @@ void *txt2img_func(void* handle,
 				   long long seed,
 				   int batchCount)
 {
-	if (!libHandle) {
+	if (!handle) {
 		return NULL;
 	}
-	void (*txt2img)() = dlsym(handle, "txt2img");
+
+	txt2img_t txt2img = (txt2img_t)dlsym(handle, "txt2img");
 	if (!txt2img) {
 		return NULL;
 	}
 	return txt2img(ctx, prompt, negativePrompt, clipSkip, cfgScale, width, height, sampleMethod, sampleSteps, seed, batchCount);
 }
 
-void *img2img_func(void* handle,
+sd_image_t *img2img_func(void* handle,
 				   void *ctx,
-				   void *img,
+				   sd_image_t img,
 				   const char *prompt,
 				   const char *negativePrompt,
 				   int clipSkip,
@@ -70,23 +122,22 @@ void *img2img_func(void* handle,
 				   long long seed,
 				   int batchCount)
 {
-	if (!libHandle) {
+	if (!handle) {
 		return NULL;
 	}
-	void (*img2img)() = dlsym(handle, "img2img");
+	img2img_t img2img =(img2img_t)dlsym(handle, "img2img");
 	if (!img2img) {
 		return NULL;
 	}
 	return img2img(ctx, img, prompt, negativePrompt, clipSkip, cfgScale, width, height, sampleMethod, sampleSteps, strength, seed, batchCount);
-
 }
 
-void free_sd_ctx_func(void* handle, void *ctx)
+void free_sd_ctx_func(void* handle, sd_ctx_t *ctx)
 {
-	if (!libHandle) {
+	if (!handle) {
 		return;
 	}
-	void (*free_sd_ctx)() = dlsym(handle, "free_sd_ctx");
+	void (*free_sd_ctx)(sd_ctx_t*) = dlsym(handle, "free_sd_ctx");
 	if (!free_sd_ctx) {
 		return;
 	}
@@ -95,27 +146,27 @@ void free_sd_ctx_func(void* handle, void *ctx)
     }
 }
 
-void *new_upscaler_ctx_func(void* handle,
+upscaler_ctx_t *new_upscaler_ctx_func(void* handle,
 							const char *esrganPath,
 							int nThreads,
 							int wType)
 {
-	if (!libHandle) {
+	if (!handle) {
 		return NULL;
 	}
-	void (*new_upscaler_ctx)() = dlsym(handle, "new_upscaler_ctx");
+	new_upscaler_ctx_t new_upscaler_ctx =(new_upscaler_ctx_t) dlsym(handle, "new_upscaler_ctx");
 	if (!new_upscaler_ctx) {
 		return NULL;
 	}
 	return new_upscaler_ctx(esrganPath, nThreads, wType);
 }
 
-void free_upscaler_ctx_func(void* handle, void *ctx)
+void free_upscaler_ctx_func(void* handle, upscaler_ctx_t *ctx)
 {
-	if (!libHandle) {
+	if (!handle) {
 		return;
 	}
-	void (*free_upscaler_ctx)() = dlsym(handle, "free_upscaler_ctx");
+	void (*free_upscaler_ctx)(upscaler_ctx_t*) = dlsym(handle, "free_upscaler_ctx");
 	if (!free_upscaler_ctx) {
 		return;
 	}
@@ -124,53 +175,59 @@ void free_upscaler_ctx_func(void* handle, void *ctx)
 	}
 }
 
-void *upscale_func(void* handle,
-				   void *ctx,
-				   void *img,
-				   unsigned int upscaleFactor)
+sd_image_t upscale_func(void* handle,
+				   upscaler_ctx_t *ctx,
+				   sd_image_t img,
+                   int upscaleFactor)
 {
-	if (!libHandle) {
-		return NULL;
+	sd_image_t empty_image;
+	empty_image.width=0;
+	empty_image.height=0;
+	empty_image.channel=0;
+	empty_image.data=NULL;
+	if (!handle) {
+		return empty_image;
 	}
-	void (*upscale)() = dlsym(handle, "upscale");
+	upscale_t upscale=(upscale_t) dlsym(handle, "upscale");
 	if (!upscale) {
-		return NULL;
+		return empty_image;
 	}
 	return upscale(ctx, img, upscaleFactor);
 }
 
-void *sd_get_system_info_func(void* handle)
+const char *sd_get_system_info_func(void* handle)
 {
-	if (!libHandle) {
+	if (!handle) {
 		return NULL;
 	}
-	void (*sd_get_system_info)() = dlsym(handle, "sd_get_system_info");
+	const char * (*sd_get_system_info)() = dlsym(handle, "sd_get_system_info");
 	if (!sd_get_system_info) {
 		return NULL;
 	}
 	return sd_get_system_info();
 }
 
-void sd_set_log_callback_func(void* handle, void *callback, void *data)
+void sd_set_log_callback_func(void* handle, sd_log_cb_t sd_log_cb, void *data)
 {
-	if (!libHandle) {
+	if (!handle) {
 		return;
 	}
 	void (*sd_set_log_callback)() = dlsym(handle, "sd_set_log_callback");
 	if (!sd_set_log_callback) {
 		return;
 	}
-	sd_set_log_callback(callback, data);
+	sd_set_log_callback(sd_log_cb, data);
 }
 */
 import "C"
+
 import (
 	"runtime"
 	"unsafe"
 )
 
 type CStableDiffusionImpl struct {
-	libSd uintptr
+	libSd unsafe.Pointer
 }
 
 func NewCStableDiffusion(libraryPath string) (*CStableDiffusionImpl, error) {
@@ -178,23 +235,23 @@ func NewCStableDiffusion(libraryPath string) (*CStableDiffusionImpl, error) {
 	if err != nil {
 		return nil, err
 	}
-	return &CStableDiffusionImpl{libSd: libSd}, nil
+	return &CStableDiffusionImpl{libSd: *(*unsafe.Pointer)(unsafe.Pointer(&libSd))}, nil
 }
 
 func (s *CStableDiffusionImpl) NewCtx(modelPath string, vaePath string, taesdPath string, loraModelDir string, vaeDecodeOnly bool, vaeTiling bool, freeParamsImmediately bool, nThreads int, wType WType, rngType RNGType, schedule Schedule) *CStableDiffusionCtx {
-	ctx := C.new_sd_ctx(C.CString(modelPath), C.CString(vaePath), C.CString(taesdPath), C.CString(loraModelDir), C.bool(vaeDecodeOnly), C.bool(vaeTiling), C.bool(freeParamsImmediately), C.int(nThreads), C.int(wType), C.int(rngType), C.int(schedule))
+	ctx := C.new_sd_ctx_func(s.libSd, C.CString(modelPath), C.CString(vaePath), C.CString(taesdPath), C.CString(loraModelDir), C.bool(vaeDecodeOnly), C.bool(vaeTiling), C.bool(freeParamsImmediately), C.int(nThreads), C.int(wType), C.int(rngType), C.int(schedule))
 	return &CStableDiffusionCtx{
-		ctx: uintptr(ctx),
+		cgoCtx: unsafe.Pointer(ctx),
 	}
 }
 
 func (s *CStableDiffusionImpl) PredictImage(ctx *CStableDiffusionCtx, prompt string, negativePrompt string, clipSkip int, cfgScale float32, width int, height int, sampleMethod SampleMethod, sampleSteps int, seed int64, batchCount int) []Image {
-	images := C.txt2img_func(s.libSd, ctx.ctx, C.CString(prompt), C.CString(negativePrompt), C.int(clipSkip), C.float(cfgScale), C.int(width), C.int(height), C.int(sampleMethod), C.int(sampleSteps), C.longlong(seed), C.int(batchCount))
+	images := C.txt2img_func(s.libSd, ctx.cgoCtx, C.CString(prompt), C.CString(negativePrompt), C.int(clipSkip), C.float(cfgScale), C.int(width), C.int(height), C.int(sampleMethod), C.int(sampleSteps), C.longlong(seed), C.int(batchCount))
 	return goImageSlice(uintptr(images), batchCount)
 }
 
 func (s *CStableDiffusionImpl) ImagePredictImage(ctx *CStableDiffusionCtx, img Image, prompt string, negativePrompt string, clipSkip int, cfgScale float32, width int, height int, sampleMethod SampleMethod, sampleSteps int, strength float32, seed int64, batchCount int) []Image {
-	images := C.img2img_func(s.libSd, ctx.ctx, unsafe.Pointer(&img), C.CString(prompt), C.CString(negativePrompt), C.int(clipSkip), C.float(cfgScale), C.int(width), C.int(height), C.int(sampleMethod), C.int(sampleSteps), C.float(strength), C.longlong(seed), C.int(batchCount))
+	images := C.img2img_func(s.libSd, ctx.cgoCtx, unsafe.Pointer(&img), C.CString(prompt), C.CString(negativePrompt), C.int(clipSkip), C.float(cfgScale), C.int(width), C.int(height), C.int(sampleMethod), C.int(sampleSteps), C.float(strength), C.longlong(seed), C.int(batchCount))
 	return goImageSlice(uintptr(images), batchCount)
 }
 
@@ -209,7 +266,7 @@ func (s *CStableDiffusionImpl) GetSystemInfo() string {
 }
 
 func (s *CStableDiffusionImpl) FreeCtx(ctx *CStableDiffusionCtx) {
-	C.free_sd_ctx_func(s.libSd, ctx.ctx)
+	C.free_sd_ctx_func(s.libSd, ctx.cgoCtx)
 	ctx = nil
 	runtime.GC()
 }
@@ -220,24 +277,24 @@ func (s *CStableDiffusionImpl) NewUpscalerCtx(esrganPath string, nThreads int, w
 }
 
 func (s *CStableDiffusionImpl) FreeUpscalerCtx(ctx *CUpScalerCtx) {
-	C.free_upscaler_ctx_func(s.libSd, ctx.ctx)
+	C.free_upscaler_ctx_func(s.libSd, ctx.cgoCtx)
 	ctx = nil
 	runtime.GC()
 }
 
 func (s *CStableDiffusionImpl) UpscaleImage(ctx *CUpScalerCtx, img Image, upscaleFactor uint32) Image {
 	imgPtr := unsafe.Pointer(&img)
-	C.upscale_func(s.libSd, ctx.ctx, imgPtr, C.uint(upscaleFactor))
+	C.upscale_func(s.libSd, ctx.cgoCtx, imgPtr, C.uint(upscaleFactor))
 	panic("check me")
 }
 
 func (s *CStableDiffusionImpl) Close() error {
-	if s.libSd != 0 {
-		err := closeLibrary(s.libSd)
+	if s.libSd != nil {
+		err := closeLibrary(uintptr(s.libSd))
 		if err != nil {
 			return err
 		}
-		s.libSd = 0
+		s.libSd = nil
 	}
 	return nil
 }

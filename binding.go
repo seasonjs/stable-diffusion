@@ -68,11 +68,13 @@ const (
 )
 
 type CStableDiffusionCtx struct {
-	ctx uintptr
+	ctx    uintptr
+	cgoCtx unsafe.Pointer
 }
 
 type CUpScalerCtx struct {
-	ctx uintptr
+	ctx    uintptr
+	cgoCtx unsafe.Pointer
 }
 
 type CLogCallback func(level LogLevel, text string)
