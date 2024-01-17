@@ -173,7 +173,13 @@ func (c *CStableDiffusionImpl) PredictImage(ctx *CStableDiffusionCtx, prompt str
 }
 
 func (c *CStableDiffusionImpl) ImagePredictImage(ctx *CStableDiffusionCtx, img Image, prompt string, negativePrompt string, clipSkip int, cfgScale float32, width int, height int, sampleMethod SampleMethod, sampleSteps int, strength float32, seed int64, batchCount int) []Image {
-	images := c.img2img(ctx.ctx, uintptr(unsafe.Pointer(&img)), prompt, negativePrompt, clipSkip, cfgScale, width, height, int(sampleMethod), sampleSteps, strength, seed, batchCount)
+	ci := cImage{
+		width:   img.Width,
+		height:  img.Height,
+		channel: img.Channel,
+		data:    uintptr(unsafe.Pointer(&img.Data[0])),
+	}
+	images := c.img2img(ctx.ctx, uintptr(unsafe.Pointer(&ci)), prompt, negativePrompt, clipSkip, cfgScale, width, height, int(sampleMethod), sampleSteps, strength, seed, batchCount)
 	return goImageSlice(images, batchCount)
 }
 
@@ -221,7 +227,13 @@ func (c *CStableDiffusionImpl) Close() error {
 }
 
 func (c *CStableDiffusionImpl) UpscaleImage(ctx *CUpScalerCtx, img Image, upscaleFactor uint32) Image {
-	uptr := c.upscale(ctx.ctx, uintptr(unsafe.Pointer(&img)), upscaleFactor)
+	ci := cImage{
+		width:   img.Width,
+		height:  img.Height,
+		channel: img.Channel,
+		data:    uintptr(unsafe.Pointer(&img.Data[0])),
+	}
+	uptr := c.upscale(ctx.ctx, uintptr(unsafe.Pointer(&ci)), upscaleFactor)
 	ptr := *(*unsafe.Pointer)(unsafe.Pointer(&uptr))
 	if ptr == nil {
 		return Image{}
