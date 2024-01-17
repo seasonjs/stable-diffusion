@@ -14,7 +14,11 @@ package sd
 #else
 #include <dlfcn.h>
 #endif
+
+#include <stdlib.h>
 #include "deps/stable-diffusion.h"
+
+extern goLogCallback(int level, const char* text, void* data);
 
 typedef sd_ctx_t* (*new_sd_ctx_t)(const char* model_path,
 								 const char* vae_path,
@@ -58,7 +62,11 @@ typedef upscaler_ctx_t* (*new_upscaler_ctx_t)(const char* esrgan_path,
                                         int n_threads,
                                         enum sd_type_t wtype);
 
+
+
 typedef sd_image_t (*upscale_t)(upscaler_ctx_t* upscaler_ctx, sd_image_t input_image, uint32_t upscale_factor);
+
+typedef	void (*sd_set_log_callback_t)(sd_log_cb_t sd_log_cb, void* data);
 
 sd_ctx_t *new_sd_ctx_func(void* handle,
 					  const char *modelPath,
@@ -207,16 +215,16 @@ const char *sd_get_system_info_func(void* handle)
 	return sd_get_system_info();
 }
 
-void sd_set_log_callback_func(void* handle, sd_log_cb_t sd_log_cb, void *data)
+void sd_set_log_callback_func (void* handle, sd_log_cb_t sd_log_cb)
 {
 	if (!handle) {
 		return;
 	}
-	void (*sd_set_log_callback)() = dlsym(handle, "sd_set_log_callback");
+	sd_set_log_callback_t sd_set_log_callback = dlsym(handle, "sd_set_log_callback");
 	if (!sd_set_log_callback) {
 		return;
 	}
-	sd_set_log_callback(sd_log_cb, data);
+	sd_set_log_callback(sd_log_cb, NULL);
 }
 */
 import "C"
@@ -225,6 +233,8 @@ import (
 	"runtime"
 	"unsafe"
 )
+
+var logCallback CLogCallback
 
 type CStableDiffusionImpl struct {
 	libSd unsafe.Pointer
@@ -247,17 +257,17 @@ func (s *CStableDiffusionImpl) NewCtx(modelPath string, vaePath string, taesdPat
 
 func (s *CStableDiffusionImpl) PredictImage(ctx *CStableDiffusionCtx, prompt string, negativePrompt string, clipSkip int, cfgScale float32, width int, height int, sampleMethod SampleMethod, sampleSteps int, seed int64, batchCount int) []Image {
 	images := C.txt2img_func(s.libSd, ctx.cgoCtx, C.CString(prompt), C.CString(negativePrompt), C.int(clipSkip), C.float(cfgScale), C.int(width), C.int(height), C.int(sampleMethod), C.int(sampleSteps), C.longlong(seed), C.int(batchCount))
-	return goImageSlice(uintptr(images), batchCount)
+	return convertCArrayToGoSlice(images, batchCount)
 }
 
 func (s *CStableDiffusionImpl) ImagePredictImage(ctx *CStableDiffusionCtx, img Image, prompt string, negativePrompt string, clipSkip int, cfgScale float32, width int, height int, sampleMethod SampleMethod, sampleSteps int, strength float32, seed int64, batchCount int) []Image {
-	images := C.img2img_func(s.libSd, ctx.cgoCtx, unsafe.Pointer(&img), C.CString(prompt), C.CString(negativePrompt), C.int(clipSkip), C.float(cfgScale), C.int(width), C.int(height), C.int(sampleMethod), C.int(sampleSteps), C.float(strength), C.longlong(seed), C.int(batchCount))
-	return goImageSlice(uintptr(images), batchCount)
+	images := C.img2img_func(s.libSd, ctx.cgoCtx, convertGoStructToCStruct(img), C.CString(prompt), C.CString(negativePrompt), C.int(clipSkip), C.float(cfgScale), C.int(width), C.int(height), C.int(sampleMethod), C.int(sampleSteps), C.float(strength), C.longlong(seed), C.int(batchCount))
+	return convertCArrayToGoSlice(images, batchCount)
 }
 
 func (s *CStableDiffusionImpl) SetLogCallBack(cb CLogCallback) {
-	C.sd_set_log_callback_func(s.libSd, unsafe.Pointer(&cb), nil)
-	panic("check me")
+	logCallback = cb
+	C.sd_set_log_callback_func(s.libSd, C.sd_log_cb_t(goLogCallback))
 }
 
 func (s *CStableDiffusionImpl) GetSystemInfo() string {
@@ -283,9 +293,8 @@ func (s *CStableDiffusionImpl) FreeUpscalerCtx(ctx *CUpScalerCtx) {
 }
 
 func (s *CStableDiffusionImpl) UpscaleImage(ctx *CUpScalerCtx, img Image, upscaleFactor uint32) Image {
-	imgPtr := unsafe.Pointer(&img)
-	C.upscale_func(s.libSd, ctx.cgoCtx, imgPtr, C.uint(upscaleFactor))
-	panic("check me")
+	result := C.upscale_func(s.libSd, ctx.cgoCtx, convertGoStructToCStruct(img), C.uint(upscaleFactor))
+	return convertCStructToGoStruct(result)
 }
 
 func (s *CStableDiffusionImpl) Close() error {
@@ -297,4 +306,48 @@ func (s *CStableDiffusionImpl) Close() error {
 		s.libSd = nil
 	}
 	return nil
+}
+
+func convertCStructToGoStruct(cStruct C.sd_image_t) Image {
+	defer C.free(unsafe.Pointer(cStruct.data))
+	defer C.free(unsafe.Pointer(&cStruct))
+	goImage := Image{
+		Width:   uint32(cStruct.width),
+		Height:  uint32(cStruct.height),
+		Channel: uint32(cStruct.channel),
+		Data:    C.GoBytes(unsafe.Pointer(cStruct.data), C.int(cStruct.width*cStruct.height*cStruct.channel)),
+	}
+	return goImage
+}
+
+func convertCArrayToGoSlice(cArray *C.sd_image_t, length int) []Image {
+	defer C.free(unsafe.Pointer(cArray))
+	cSlice := unsafe.Slice(cArray, length)
+	goSlice := make([]Image, length)
+	for i, cStruct := range cSlice {
+		goSlice[i] = convertCStructToGoStruct(cStruct)
+	}
+	return goSlice
+}
+
+func convertGoStructToCStruct(goStruct Image) C.sd_image_t {
+	cStruct := C.sd_image_t{
+		width:   C.uint32_t(goStruct.Width),
+		height:  C.uint32_t(goStruct.Height),
+		channel: C.uint32_t(goStruct.Channel),
+		data:    nil,
+	}
+
+	if len(goStruct.Data) > 0 {
+		cStruct.data = (*C.uint8_t)(C.CBytes(goStruct.Data))
+	}
+	return cStruct
+}
+
+//export goLogCallback
+func goLogCallback(level C.enum_sd_log_level_t, text *C.char, data unsafe.Pointer) {
+	goMessage := C.GoString(text)
+	if logCallback != nil {
+		logCallback(LogLevel(level), goMessage)
+	}
 }

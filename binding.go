@@ -107,26 +107,3 @@ type Image struct {
 	Channel uint32
 	Data    []byte
 }
-
-func goImageSlice(c uintptr, size int) []Image {
-	// We take the address and then dereference it to trick go vet from creating a possible misuse of unsafe.Pointer
-	ptr := *(*unsafe.Pointer)(unsafe.Pointer(&c))
-	if ptr == nil {
-		return nil
-	}
-	img := (*cImage)(ptr)
-	goImages := make([]Image, 0, size)
-	imgSlice := unsafe.Slice(img, size)
-	for _, image := range imgSlice {
-		var gImg Image
-		gImg.Channel = image.channel
-		gImg.Width = image.width
-		gImg.Height = image.height
-		dataPtr := *(*unsafe.Pointer)(unsafe.Pointer(&image.data))
-		if ptr != nil {
-			gImg.Data = unsafe.Slice((*byte)(dataPtr), image.channel*image.width*image.height)
-		}
-		goImages = append(goImages, gImg)
-	}
-	return goImages
-}

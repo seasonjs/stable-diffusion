@@ -22,7 +22,7 @@ func main() {
 		log.Println(msg)
 	})
 
-	err = model.LoadFromFile("./models/miniSD.ckpt")
+	err = model.LoadFromFile("./models/mysd.safetensors")
 	if err != nil {
 		print(err.Error())
 		return

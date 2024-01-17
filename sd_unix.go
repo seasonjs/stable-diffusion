@@ -24,10 +24,6 @@ func openLibrary(name string) (uintptr, error) {
 }
 
 func closeLibrary(handle uintptr) error {
-	C.closeLibrary(*(*unsafe.Pointer)(unsafe.Pointer(&handle)))
+	C.dlclose(*(*unsafe.Pointer)(unsafe.Pointer(&handle)))
 	return nil
-}
-
-func syscall() {
-
 }
