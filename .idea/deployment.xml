@@ -5,7 +5,7 @@
       <paths name="192.168.8.16">
         <serverdata>
           <mappings>
-            <mapping deploy="/Documents/stable-diffusion" local="$PROJECT_DIR$" web="/" />
+            <mapping local="$PROJECT_DIR$" web="/" />
           </mappings>
         </serverdata>
       </paths>
