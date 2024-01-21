@@ -28,6 +28,9 @@ var libStableDiffusionAvx512 []byte
 //go:embed deps/windows/sd-abi_cuda12.dll
 var libStableDiffusionCuda12 []byte
 
+//go:embed deps/windows/sd-abi_rocm5.5.dll
+var libStableDiffusionRocm5 []byte
+
 var libName = "stable-diffusion-*.dll"
 
 func getDl(gpu bool) []byte {
@@ -36,12 +39,19 @@ func getDl(gpu bool) []byte {
 		if err != nil {
 			log.Println(err)
 		}
-		driver := info.Cuda()
-		log.Print("get gpu info: ", driver.Name)
+		cuda := info.Cuda()
+		rocm := info.ROCm()
 
-		if driver.Available() {
+		if cuda.Available() {
+			log.Print("get gpu info: ", cuda.Name)
 			log.Println("Use GPU CUDA instead.")
 			return libStableDiffusionCuda12
+		}
+
+		if rocm.Available() {
+			log.Print("get gpu info: ", cuda.Name)
+			log.Println("Use GPU ROCm instead.")
+			return libStableDiffusionRocm5
 		}
 
 		log.Println("GPU not support, use CPU instead.")

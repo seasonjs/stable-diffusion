@@ -23,11 +23,13 @@ See `deps` folder for dylib compatibility, push request is welcome.
 
 Windows NVIDIA GPU User may need check [cuda architecture](https://developer.nvidia.com/cuda-gpus) to get more information.
 
-| platform | x32         | x64                     | arm         | AMD/ROCM    | NVIDIA/CUDA    |
-|----------|-------------|-------------------------|-------------|-------------|----------------|
-| windows  | not support | support avx/avx2/avx512 | not support | not support | cuda12 support |
-| linux    | not support | support                 | not support | not support | not support    |
-| darwin   | not support | support                 | support     | not support | not support    |
+Windows AMD/ROCM GPU User may need check [system requirements](https://rocm.docs.amd.com/projects/install-on-windows/en/latest/reference/system-requirements.html) to get more information.
+
+| platform | x32         | x64                     | arm         | AMD/ROCM        | NVIDIA/CUDA    |
+|----------|-------------|-------------------------|-------------|-----------------|----------------|
+| windows  | not support | support avx/avx2/avx512 | not support | rocm5.5 support | cuda12 support |
+| linux    | not support | support                 | not support | not support     | not support    |
+| darwin   | not support | support                 | support     | not support     | not support    |
 
 ## AutoModel Dynamic Libraries Disclaimer
 
