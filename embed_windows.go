@@ -16,19 +16,22 @@ import (
 	"golang.org/x/sys/cpu"
 )
 
-//go:embed deps/windows/sd-abi_avx2.dll
-var libStableDiffusionAvx2 []byte
+//go:embed deps/windows/stable-diffusion-noavx.dll
+var libStableDiffusionNoAvx []byte
 
-//go:embed deps/windows/sd-abi_avx.dll
+//go:embed deps/windows/stable-diffusion-avx.dll
 var libStableDiffusionAvx []byte
 
-//go:embed deps/windows/sd-abi_avx512.dll
+//go:embed deps/windows/stable-diffusion-avx2.dll
+var libStableDiffusionAvx2 []byte
+
+//go:embed deps/windows/stable-diffusion-avx512.dll
 var libStableDiffusionAvx512 []byte
 
-//go:embed deps/windows/sd-abi_cuda12.dll
+//go:embed deps/windows/stable-diffusion-cuda12.dll
 var libStableDiffusionCuda12 []byte
 
-//go:embed deps/windows/sd-abi_rocm5.5.dll
+//go:embed deps/windows/stable-diffusion-rocm5.5.dll
 var libStableDiffusionRocm5 []byte
 
 var libName = "stable-diffusion-*.dll"
@@ -72,7 +75,7 @@ func getDl(gpu bool) []byte {
 		return libStableDiffusionAvx
 	}
 
-	panic("Automatic loading of dynamic library failed, please use `NewRwkvModel` method load manually. ")
+	return libStableDiffusionNoAvx
 }
 
 type Driver struct {

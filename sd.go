@@ -25,7 +25,9 @@ const (
 type Options struct {
 	VaePath               string
 	TaesdPath             string
+	ControlNetPath        string
 	LoraModelDir          string
+	EmbedDir              string
 	VaeDecodeOnly         bool
 	VaeTiling             bool
 	FreeParamsImmediately bool
@@ -34,6 +36,7 @@ type Options struct {
 	RngType               RNGType
 	Schedule              Schedule
 	GpuEnable             bool
+	KeepControlNetCpu     bool
 }
 
 type FullParams struct {
@@ -48,6 +51,7 @@ type FullParams struct {
 	Seed             int64
 	BatchCount       int
 	OutputsImageType OutputsImageType
+	ControlStrength  float32
 }
 
 var DefaultOptions = Options{
@@ -136,18 +140,20 @@ func (sd *Model) LoadFromFile(path string) error {
 		sd.diffusionModelPath = path
 	}
 
-	ctx := sd.csd.NewCtx(path,
+	sd.ctx = sd.csd.NewCtx(path,
 		sd.options.VaePath,
 		sd.options.TaesdPath,
+		sd.options.ControlNetPath,
 		sd.options.LoraModelDir,
+		sd.options.EmbedDir,
 		sd.options.VaeDecodeOnly,
 		sd.options.VaeTiling,
 		sd.options.FreeParamsImmediately,
 		sd.options.Threads,
 		sd.options.Wtype,
 		sd.options.RngType,
-		sd.options.Schedule)
-	sd.ctx = ctx
+		sd.options.Schedule,
+		sd.options.KeepControlNetCpu)
 	return nil
 }
 
@@ -158,19 +164,20 @@ func (sd *Model) SetOptions(options Options) {
 		log.Printf("model already loaded, free old model and set new options")
 	}
 	sd.options = &options
-	ctx := sd.csd.NewCtx(
-		sd.diffusionModelPath,
+	sd.ctx = sd.csd.NewCtx(sd.diffusionModelPath,
 		sd.options.VaePath,
 		sd.options.TaesdPath,
+		sd.options.ControlNetPath,
 		sd.options.LoraModelDir,
+		sd.options.EmbedDir,
 		sd.options.VaeDecodeOnly,
 		sd.options.VaeTiling,
 		sd.options.FreeParamsImmediately,
 		sd.options.Threads,
 		sd.options.Wtype,
 		sd.options.RngType,
-		sd.options.Schedule)
-	sd.ctx = ctx
+		sd.options.Schedule,
+		sd.options.KeepControlNetCpu)
 }
 
 func (sd *Model) Predict(prompt string, params FullParams, writer []io.Writer) error {
@@ -197,6 +204,8 @@ func (sd *Model) Predict(prompt string, params FullParams, writer []io.Writer) e
 		params.SampleSteps,
 		params.Seed,
 		params.BatchCount,
+		nil,
+		0.9,
 	)
 
 	if images == nil || len(images) != params.BatchCount {
@@ -213,6 +222,54 @@ func (sd *Model) Predict(prompt string, params FullParams, writer []io.Writer) e
 	}
 
 	return nil
+}
+
+func (sd *Model) ControlCondPredict(reader io.Reader, prompt string, params FullParams, writer []io.Writer) error {
+	if len(writer) != params.BatchCount {
+		return errors.New("writer count not match batch count")
+	}
+
+	if sd.ctx == nil {
+		return errors.New("model not loaded")
+	}
+
+	if params.Width%8 != 0 || params.Height%8 != 0 {
+		return errors.New("width and height must be multiples of 8")
+	}
+
+	decode, _, err := image.Decode(reader)
+	if err != nil {
+		return err
+	}
+	initImage := imageToBytes(decode)
+
+	initImage = sd.csd.PreprocessCanny(initImage, int(initImage.Width), int(initImage.Height), 0.08, 0.08, 0.8, 1.0, false)
+
+	images := sd.csd.PredictImage(
+		sd.ctx,
+		prompt,
+		params.NegativePrompt,
+		params.ClipSkip,
+		params.CfgScale,
+		params.Width,
+		params.Height,
+		params.SampleMethod,
+		params.SampleSteps,
+		params.Seed,
+		params.BatchCount,
+		&initImage,
+		params.ControlStrength,
+	)
+
+	for i, img := range images {
+		outputsImage := bytesToImage(img.Data, int(img.Width), int(img.Height))
+		err = imageToWriter(outputsImage, params.OutputsImageType, writer[i])
+		if err != nil {
+			return err
+		}
+	}
+	return nil
+
 }
 
 func (sd *Model) ImagePredict(reader io.Reader, prompt string, params FullParams, writer []io.Writer) error {
@@ -308,6 +365,10 @@ func (sd *Model) Close() error {
 		}
 	}
 	return nil
+}
+
+func (sd *Model) Convert(inputPath string, vaePath string, outputPath string, outputType WType) bool {
+	return sd.csd.Convert(inputPath, vaePath, outputPath, outputType)
 }
 
 func imageToBytes(decode image.Image) Image {
