@@ -51,24 +51,25 @@ const (
 )
 
 const (
-	F32   WType = 0
-	F16         = 1
-	Q4_0        = 2
-	Q4_1        = 3
-	Q5_0        = 6
-	Q5_1        = 7
-	Q8_0        = 8
-	Q8_1        = 9
-	Q2_K        = 10
-	Q3_K        = 11
-	Q4_K        = 12
-	Q5_K        = 13
-	Q6_K        = 14
-	Q8_K        = 15
-	I8          = 16
-	I16         = 17
-	I32         = 18
-	COUNT       = 19 // don't use this when specifying a type
+	F32     WType = 0
+	F16           = 1
+	Q4_0          = 2
+	Q4_1          = 3
+	Q5_0          = 6
+	Q5_1          = 7
+	Q8_0          = 8
+	Q8_1          = 9
+	Q2_K          = 10
+	Q3_K          = 11
+	Q4_K          = 12
+	Q5_K          = 13
+	Q6_K          = 14
+	Q8_K          = 15
+	IQ2_XXS       = 16
+	I8            = 17
+	I16           = 18
+	I32           = 19
+	AUTO          = 20
 )
 
 type CStableDiffusionCtx struct {
@@ -82,16 +83,24 @@ type CUpScalerCtx struct {
 type CLogCallback func(level LogLevel, text string)
 
 type CStableDiffusion interface {
-	NewCtx(modelPath string, vaePath string, taesdPath string, loraModelDir string, vaeDecodeOnly bool, vaeTiling bool, freeParamsImmediately bool, nThreads int, wType WType, rngType RNGType, schedule Schedule) *CStableDiffusionCtx
-	PredictImage(ctx *CStableDiffusionCtx, prompt string, negativePrompt string, clipSkip int, cfgScale float32, width int, height int, sampleMethod SampleMethod, sampleSteps int, seed int64, batchCount int) []Image
+	NewCtx(modelPath string, vaePath string, taesdPath string, controlNetPath string, loraModelDir string, embedDir string, vaeDecodeOnly bool, vaeTiling bool, freeParamsImmediately bool, nThreads int, wType WType, rngType RNGType, schedule Schedule, keepControlNetCpu bool) *CStableDiffusionCtx
+
+	PredictImage(ctx *CStableDiffusionCtx, prompt string, negativePrompt string, clipSkip int, cfgScale float32, width int, height int, sampleMethod SampleMethod, sampleSteps int, seed int64, batchCount int, controlCond *Image, controlStrength float32) []Image
+
 	ImagePredictImage(ctx *CStableDiffusionCtx, img Image, prompt string, negativePrompt string, clipSkip int, cfgScale float32, width int, height int, sampleMethod SampleMethod, sampleSteps int, strength float32, seed int64, batchCount int) []Image
+
 	SetLogCallBack(cb CLogCallback)
 	GetSystemInfo() string
+
+	Convert(inputPath string, vaePath string, outputPath string, outputType WType) bool
+
 	FreeCtx(ctx *CStableDiffusionCtx)
 
 	NewUpscalerCtx(esrganPath string, nThreads int, wType WType) *CUpScalerCtx
 	FreeUpscalerCtx(ctx *CUpScalerCtx)
 	UpscaleImage(ctx *CUpScalerCtx, img Image, upscaleFactor uint32) Image
+
+	PreprocessCanny(image Image, width int, height int, highThreshold float32, lowThreshold float32, week float32, strong float32, inverse bool) Image
 
 	Close() error
 }
@@ -101,13 +110,6 @@ type cImage struct {
 	height  uint32
 	channel uint32
 	data    uintptr
-}
-
-type cDarwinImage struct {
-	width   uint32
-	height  uint32
-	channel uint32
-	data    *byte
 }
 
 type Image struct {
@@ -122,13 +124,52 @@ type CStableDiffusionImpl struct {
 
 	sdGetSystemInfo func() string
 
-	newSdCtx func(modelPath string, vaePath string, taesdPath string, loraModelDir string, vaeDecodeOnly bool, vaeTiling bool, freeParamsImmediately bool, nThreads int, wtype int, rngType int, schedule int) uintptr
+	newSdCtx func(modelPath string,
+		vaePath string,
+		taesdPath string,
+		controlNetPath string,
+		loraModelDir string,
+		embedDir string,
+		vaeDecodeOnly bool,
+		vaeTiling bool,
+		freeParamsImmediately bool,
+		nThreads int,
+		wType int,
+		rngType int,
+		schedule int,
+		keepControlNetCpu bool) uintptr
 
 	sdSetLogCallback func(callback func(level int, text uintptr, data uintptr) uintptr, data uintptr)
 
-	txt2img func(ctx uintptr, prompt string, negativePrompt string, clipSkip int, cfgScale float32, width int, height int, sampleMethod int, sampleSteps int, seed int64, batchCount int) uintptr
+	txt2img func(
+		ctx uintptr,
+		prompt string,
+		negativePrompt string,
+		clipSkip int,
+		cfgScale float32,
+		width int,
+		height int,
+		sampleMethod int,
+		sampleSteps int,
+		seed int64,
+		batchCount int,
+		controlCond uintptr,
+		controlStrength float32) uintptr
 
-	img2img func(ctx uintptr, img uintptr, prompt string, negativePrompt string, clipSkip int, cfgScale float32, width int, height int, sampleMethod int, sampleSteps int, strength float32, seed int64, batchCount int) uintptr
+	img2img func(
+		ctx uintptr,
+		img uintptr,
+		prompt string,
+		negativePrompt string,
+		clipSkip int,
+		cfgScale float32,
+		width int,
+		height int,
+		sampleMethod int,
+		sampleSteps int,
+		strength float32,
+		seed int64,
+		batchCount int) uintptr
 
 	freeSdCtx func(ctx uintptr)
 
@@ -137,6 +178,10 @@ type CStableDiffusionImpl struct {
 	freeUpscalerCtx func(ctx uintptr)
 
 	upscale func(ctx uintptr, img uintptr, upscaleFactor uint32) uintptr
+
+	convert func(inputPath string, vaePath string, outputPath string, outputType int) bool
+
+	preprocessCanny func(img uintptr, width int, height int, highThreshold float32, lowThreshold float32, week float32, strong float32, inverse bool) *byte
 }
 
 func NewCStableDiffusion(libraryPath string) (*CStableDiffusionImpl, error) {
@@ -156,19 +201,59 @@ func NewCStableDiffusion(libraryPath string) (*CStableDiffusionImpl, error) {
 	purego.RegisterLibFunc(&impl.newUpscalerCtx, libSd, "new_upscaler_ctx")
 	purego.RegisterLibFunc(&impl.freeUpscalerCtx, libSd, "free_upscaler_ctx")
 	purego.RegisterLibFunc(&impl.upscale, libSd, "upscale")
+	purego.RegisterLibFunc(&impl.convert, libSd, "convert")
+	purego.RegisterLibFunc(&impl.preprocessCanny, libSd, "preprocess_canny")
 
 	return &impl, nil
 }
 
-func (c *CStableDiffusionImpl) NewCtx(modelPath string, vaePath string, taesdPath string, loraModelDir string, vaeDecodeOnly bool, vaeTiling bool, freeParamsImmediately bool, nThreads int, wType WType, rngType RNGType, schedule Schedule) *CStableDiffusionCtx {
-	ctx := c.newSdCtx(modelPath, vaePath, taesdPath, loraModelDir, vaeDecodeOnly, vaeTiling, freeParamsImmediately, nThreads, int(wType), int(rngType), int(schedule))
+func (c *CStableDiffusionImpl) NewCtx(modelPath string, vaePath string, taesdPath string, controlNetPath string, loraModelDir string, embedDir string, vaeDecodeOnly bool, vaeTiling bool, freeParamsImmediately bool, nThreads int, wType WType, rngType RNGType, schedule Schedule, keepControlNetCpu bool) *CStableDiffusionCtx {
+	ctx := c.newSdCtx(modelPath,
+		vaePath,
+		taesdPath,
+		controlNetPath,
+		loraModelDir,
+		embedDir,
+		vaeDecodeOnly,
+		vaeTiling,
+		freeParamsImmediately,
+		nThreads,
+		int(wType),
+		int(rngType),
+		int(schedule),
+		keepControlNetCpu,
+	)
 	return &CStableDiffusionCtx{
 		ctx: ctx,
 	}
 }
 
-func (c *CStableDiffusionImpl) PredictImage(ctx *CStableDiffusionCtx, prompt string, negativePrompt string, clipSkip int, cfgScale float32, width int, height int, sampleMethod SampleMethod, sampleSteps int, seed int64, batchCount int) []Image {
-	images := c.txt2img(ctx.ctx, prompt, negativePrompt, clipSkip, cfgScale, width, height, int(sampleMethod), sampleSteps, seed, batchCount)
+func (c *CStableDiffusionImpl) PredictImage(ctx *CStableDiffusionCtx, prompt string, negativePrompt string, clipSkip int, cfgScale float32, width int, height int, sampleMethod SampleMethod, sampleSteps int, seed int64, batchCount int, controlCond *Image, controlStrength float32) []Image {
+	var ci *cImage
+	if controlCond != nil {
+		ci = &cImage{
+			width:   controlCond.Width,
+			height:  controlCond.Height,
+			channel: controlCond.Channel,
+			data:    uintptr(unsafe.Pointer(&controlCond.Data[0])),
+		}
+	}
+
+	images := c.txt2img(
+		ctx.ctx,
+		prompt,
+		negativePrompt,
+		clipSkip,
+		cfgScale,
+		width,
+		height,
+		int(sampleMethod),
+		sampleSteps,
+		seed,
+		batchCount,
+		uintptr(unsafe.Pointer(ci)),
+		controlStrength)
+
 	return goImageSlice(images, batchCount)
 }
 
@@ -179,7 +264,22 @@ func (c *CStableDiffusionImpl) ImagePredictImage(ctx *CStableDiffusionCtx, img I
 		channel: img.Channel,
 		data:    uintptr(unsafe.Pointer(&img.Data[0])),
 	}
-	images := c.img2img(ctx.ctx, uintptr(unsafe.Pointer(&ci)), prompt, negativePrompt, clipSkip, cfgScale, width, height, int(sampleMethod), sampleSteps, strength, seed, batchCount)
+
+	images := c.img2img(ctx.ctx,
+		uintptr(unsafe.Pointer(&ci)),
+		prompt,
+		negativePrompt,
+		clipSkip,
+		cfgScale,
+		width,
+		height,
+		int(sampleMethod),
+		sampleSteps,
+		strength,
+		seed,
+		batchCount,
+	)
+
 	return goImageSlice(images, batchCount)
 }
 
@@ -245,6 +345,20 @@ func (c *CStableDiffusionImpl) UpscaleImage(ctx *CUpScalerCtx, img Image, upscal
 		Height:  cimg.height,
 		Channel: cimg.channel,
 		Data:    unsafe.Slice((*byte)(dataPtr), cimg.channel*cimg.width*cimg.height),
+	}
+}
+
+func (c *CStableDiffusionImpl) Convert(inputPath string, vaePath string, outputPath string, outputType WType) bool {
+	return c.convert(inputPath, vaePath, outputPath, int(outputType))
+}
+
+func (c *CStableDiffusionImpl) PreprocessCanny(image Image, width int, height int, highThreshold float32, lowThreshold float32, week float32, strong float32, inverse bool) Image {
+	dataPtr := c.preprocessCanny(uintptr(unsafe.Pointer(&image.Data[0])), width, height, highThreshold, lowThreshold, week, strong, inverse)
+	return Image{
+		Width:   image.Width,
+		Height:  image.Height,
+		Channel: image.Channel,
+		Data:    unsafe.Slice((*byte)(dataPtr), image.Width*image.Width*image.Height),
 	}
 }
 

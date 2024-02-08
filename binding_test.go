@@ -115,10 +115,10 @@ func TestNewCStableDiffusionText2Img(t *testing.T) {
 	diffusion.SetLogCallBack(func(level sd.LogLevel, text string) {
 		fmt.Printf("%s", text)
 	})
-	ctx := diffusion.NewCtx("./models/miniSD.ckpt", "", "", "", false, false, true, 4, sd.F16, sd.CUDA_RNG, sd.DEFAULT)
+	ctx := diffusion.NewCtx("./models/miniSD.ckpt", "", "", "", "", "", false, false, true, 4, sd.F16, sd.CUDA_RNG, sd.DEFAULT, false)
 	defer diffusion.FreeCtx(ctx)
 
-	images := diffusion.PredictImage(ctx, "british short hair cat, high quality", "", 0, 7.0, 256, 256, sd.EULER_A, 10, 43, 1)
+	images := diffusion.PredictImage(ctx, "british short hair cat, high quality", "", 0, 7.0, 256, 256, sd.EULER_A, 10, 43, 1, nil, 0.9)
 
 	writeToFile(t, images[0].Data, 256, 256, "./assets/love_cat1.png")
 }
@@ -132,7 +132,7 @@ func TestNewCStableDiffusionImg2Img(t *testing.T) {
 	diffusion.SetLogCallBack(func(level sd.LogLevel, text string) {
 		fmt.Printf("%s", text)
 	})
-	ctx := diffusion.NewCtx("./models/miniSD.ckpt", "", "", "", false, false, true, -1, sd.F16, sd.CUDA_RNG, sd.DEFAULT)
+	ctx := diffusion.NewCtx("./models/miniSD.ckpt", "", "", "", "", "", false, false, true, -1, sd.F16, sd.CUDA_RNG, sd.DEFAULT, false)
 	defer diffusion.FreeCtx(ctx)
 
 	img := readFromFile(t, "./assets/test.png")
