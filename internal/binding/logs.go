@@ -1,0 +1,33 @@
+package binding
+
+import (
+	"unsafe"
+
+	"github.com/jupiterrider/ffi"
+	"github.com/seasonjs/stable-diffusion/pkg/types"
+)
+
+// LogCallback 日志回调函数类型
+type LogCallback func(level types.LogLevel, text string)
+
+var (
+	// SD_API void sd_set_log_callback(sd_log_cb_t sd_log_cb, void* data);
+	setLogCallback ffi.Fun
+)
+
+func LoadLog(lib ffi.Lib) error {
+	var err error
+
+	setLogCallback, err = lib.Prep("sd_set_log_callback", &ffi.TypeVoid, &ffi.TypePointer, &ffi.TypePointer)
+	
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func SetLogCallback(callback uintptr) {
+	nada := uintptr(0)
+	setLogCallback.Call(unsafe.Pointer(&callback), nada)
+}

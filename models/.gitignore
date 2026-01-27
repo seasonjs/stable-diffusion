@@ -1,6 +1,0 @@
-*.ckpt
-*.pt
-*.pth
-*.bin
-*.gguf
-*.safetensors
