@@ -1,6 +1,7 @@
 package binding
 
 import (
+	"structs"
 	"unsafe"
 
 	"github.com/ebitengine/purego"
@@ -8,6 +9,7 @@ import (
 )
 
 type CtxParams struct {
+	_                           structs.HostLayout
 	ModelPath                   *byte
 	ClipLPath                   *byte
 	ClipGPath                   *byte
@@ -71,7 +73,7 @@ var FFITypeCtxParams = ffi.NewType(
 	&ffi.TypePointer, // VaePath: *byte
 	&ffi.TypePointer, // TaesdPath: *byte
 	&ffi.TypePointer, // ControlNetPath: *byte
-	&ffi.TypePointer, // Embeddings: *Embedding 
+	&ffi.TypePointer, // Embeddings: *Embedding
 	&ffi.TypeUint32,  // EmbeddingCount: uint32
 	&ffi.TypePointer, // PhotoMakerPath: *byte
 	&ffi.TypePointer, // TensorTypeRules: *byte
@@ -142,7 +144,7 @@ func LoadContextFuns(lib ffi.Lib) error {
 	// SD_API void free_sd_ctx(sd_ctx_t* sd_ctx);
 	freeCtxFun, err = lib.Prep("free_sd_ctx", &ffi.TypeVoid, &ffi.TypePointer)
 	if err != nil {
-		return  err
+		return err
 	}
 
 	return nil
@@ -158,7 +160,7 @@ func CtxParamsInit() CtxParams {
 }
 
 // CtxParamsToStr 将上下文参数转换为字符串
-func  CtxParamsToStr(params *CtxParams) *byte {
+func CtxParamsToStr(params *CtxParams) *byte {
 	var result *byte
 	ctxParamsToStrFun.Call(unsafe.Pointer(&result), unsafe.Pointer(params))
 	return result

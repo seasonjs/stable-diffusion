@@ -1,13 +1,15 @@
 package binding
 
 import (
+	"structs"
 	"unsafe"
+
 	"github.com/ebitengine/purego"
 	"github.com/jupiterrider/ffi"
 )
 
-
 type TilingParams struct {
+	_             structs.HostLayout
 	Enabled       bool
 	TileSizeX     int32
 	TileSizeY     int32
@@ -17,11 +19,13 @@ type TilingParams struct {
 }
 
 type Embedding struct {
+	_    structs.HostLayout
 	Name *byte
 	Path *byte
 }
 
 type PmParams struct {
+	_             structs.HostLayout
 	IdImages      *Image
 	IdImagesCount int32
 	IdEmbedPath   *byte
@@ -29,6 +33,7 @@ type PmParams struct {
 }
 
 type ImgGenParams struct {
+	_                  structs.HostLayout
 	Loras              *Lora
 	LoraCount          uint32
 	Prompt             *byte
@@ -80,16 +85,16 @@ var FFITypeImgGenParams = ffi.NewType(
 )
 
 var (
-		// SD_API void sd_img_gen_params_init(sd_img_gen_params_t* sd_img_gen_params);
+	// SD_API void sd_img_gen_params_init(sd_img_gen_params_t* sd_img_gen_params);
 	imgGenParamsInitFun func(uintptr)
 
 	// SD_API char* sd_img_gen_params_to_str(const sd_img_gen_params_t* sd_img_gen_params);
 	imgGenParamsToStrFun ffi.Fun
 
 	// SD_API sd_image_t* generate_image(sd_ctx_t* sd_ctx, const sd_img_gen_params_t* sd_img_gen_params);
-	generateImageFun ffi.Fun
+	// generateImageFun ffi.Fun
+	generateImageFun func(uintptr, uintptr) uintptr
 )
-
 
 func LoadImgGenFuns(lib ffi.Lib) error {
 	var err error
@@ -104,17 +109,13 @@ func LoadImgGenFuns(lib ffi.Lib) error {
 	}
 
 	// SD_API sd_image_t* generate_image(sd_ctx_t* sd_ctx, const sd_img_gen_params_t* sd_img_gen_params);
-	generateImageFun, err = lib.Prep("generate_image", &ffi.TypePointer, &ffi.TypePointer, &FFITypeImgGenParams)
-	if err != nil {
-		return err
-	}
+	purego.RegisterLibFunc(&generateImageFun, lib.Addr, "generate_image")
 
 	return nil
 }
 
 // ImgGenParamsInit 初始化图像生成参数
 func ImgGenParamsInit() ImgGenParams {
-	//这里需要分配到堆上，防止内存发生漂移
 	structPtr := new(ImgGenParams)
 	ptr := uintptr(unsafe.Pointer(structPtr))
 	imgGenParamsInitFun(ptr)
@@ -128,7 +129,6 @@ func ImgGenParamsToStr(params ImgGenParams) *byte {
 }
 
 func GenerateImage(ctx Context, params *ImgGenParams) uintptr {
-	var result uintptr
-	generateImageFun.Call(unsafe.Pointer(&result), unsafe.Pointer(&ctx), unsafe.Pointer(params))
+	result := generateImageFun(uintptr(ctx), uintptr(unsafe.Pointer(params)))
 	return result
 }

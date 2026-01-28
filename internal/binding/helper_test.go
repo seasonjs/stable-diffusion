@@ -152,3 +152,13 @@ func writeTestImageToFile(t *testing.T, byteData []byte, height int, width int, 
 	}
 	t.Log("Image saved at", outputPath)
 }
+
+func testSetupStd(t *testing.T) ffi.Lib {
+	lib, err := utils.LoadStdLib()
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	utils.LoadStdFuns(lib)
+	return lib
+}

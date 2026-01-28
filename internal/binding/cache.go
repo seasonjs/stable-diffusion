@@ -1,11 +1,11 @@
 package binding
 
 import (
-	"unsafe"
 	"github.com/ebitengine/purego"
 	"github.com/jupiterrider/ffi"
+	"structs"
+	"unsafe"
 )
-
 
 // FFITypeCacheParams 是CacheParams结构体的ffi.Type定义
 var FFITypeCacheParams = ffi.NewType(
@@ -33,6 +33,7 @@ var (
 )
 
 type CacheParams struct {
+	_                        structs.HostLayout
 	Mode                     int32
 	ReuseThreshold           float32
 	StartPercent             float32
@@ -52,8 +53,7 @@ type CacheParams struct {
 	ScmPolicyDynamic         bool
 }
 
-
-func LoadCacheFuns(lib ffi.Lib) error{
+func LoadCacheFuns(lib ffi.Lib) error {
 	// SD_API void sd_cache_params_init(sd_cache_params_t* cache_params);
 	// 这种通过c初始化结构体的操作使用purego 进行
 	purego.RegisterLibFunc(&cacheParamsInitFun, lib.Addr, "sd_cache_params_init")
@@ -61,7 +61,7 @@ func LoadCacheFuns(lib ffi.Lib) error{
 	return nil
 }
 
-func CacheParamsInit() CacheParams{
+func CacheParamsInit() CacheParams {
 	//这里需要分配到堆上，防止内存发生漂移
 	structPtr := new(CacheParams)
 	ptr := uintptr(unsafe.Pointer(structPtr))

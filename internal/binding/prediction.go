@@ -14,7 +14,6 @@ var (
 	strToPrediction ffi.Fun
 )
 
-
 func LoadPredictionFuns(lib ffi.Lib) error {
 	var err error
 

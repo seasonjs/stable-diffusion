@@ -5,10 +5,9 @@ import (
 
 	"github.com/seasonjs/stable-diffusion/internal/binding"
 	"github.com/seasonjs/stable-diffusion/pkg/types"
-
 )
 
-func ImagePtrToImageSlice(imgPtr uintptr, size int) []binding.Image{
+func ImagePtrToImageSlice(imgPtr uintptr, size int) []binding.Image {
 	// We take the address and then dereference it to trick go vet from creating a possible misuse of unsafe.Pointer
 	ptr := *(*unsafe.Pointer)(unsafe.Pointer(&imgPtr))
 	if ptr == nil {
@@ -21,11 +20,11 @@ func ImagePtrToImageSlice(imgPtr uintptr, size int) []binding.Image{
 
 func GoImage(cImage binding.Image) types.Image {
 	dataPtr := *(*unsafe.Pointer)(unsafe.Pointer(&cImage.Data))
-	 gImg := types.Image{
+	gImg := types.Image{
 		Channel: cImage.Channel,
 		Width:   cImage.Width,
 		Height:  cImage.Height,
-		Data:    unsafe.Slice((*byte)(dataPtr), cImage.Channel * cImage.Width*cImage.Height),
+		Data:    unsafe.Slice((*byte)(dataPtr), cImage.Channel*cImage.Width*cImage.Height),
 	}
 	return gImg
 }
@@ -49,3 +48,18 @@ func GoImageSlice(imgPtr uintptr, size int) []types.Image {
 // 	}
 // 	return uintptr(unsafe.Pointer(&cImage))
 // }
+func FreeImage(image binding.Image) {
+	if image.Data != 0 {
+		Free(image.Data)
+	}
+}
+
+func FreeImageSlice(imagePtr uintptr, size int) {
+	cImgSlice := ImagePtrToImageSlice(imagePtr, size)
+	for _, image := range cImgSlice {
+		FreeImage(image)
+	}
+	if imagePtr != 0 {
+		Free(imagePtr)
+	}
+}

@@ -10,7 +10,6 @@ func CString(s string) (*byte, error) {
 }
 
 // GoString copies a null-terminated char* to a Go string.
-func GoString(p *byte) string {
+func goByteString(p *byte) string {
 	return windows.BytePtrToString(p)
 }
-

@@ -15,11 +15,11 @@ var (
 	setLogCallback ffi.Fun
 )
 
-func LoadLog(lib ffi.Lib) error {
+func LoadLogFuns(lib ffi.Lib) error {
 	var err error
 
 	setLogCallback, err = lib.Prep("sd_set_log_callback", &ffi.TypeVoid, &ffi.TypePointer, &ffi.TypePointer)
-	
+
 	if err != nil {
 		return err
 	}
@@ -29,5 +29,5 @@ func LoadLog(lib ffi.Lib) error {
 
 func SetLogCallback(callback uintptr) {
 	nada := uintptr(0)
-	setLogCallback.Call(unsafe.Pointer(&callback), nada)
+	setLogCallback.Call(nil, unsafe.Pointer(&callback), unsafe.Pointer(&nada))
 }

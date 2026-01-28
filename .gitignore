@@ -1,3 +1,4 @@
 /data/
 *cublas*.dll
 *cudart*.dll
+testdata/sd

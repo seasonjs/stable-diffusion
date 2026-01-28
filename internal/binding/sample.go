@@ -2,9 +2,11 @@ package binding
 
 import (
 	"github.com/ebitengine/purego"
+	"structs"
+	"unsafe"
+
 	"github.com/jupiterrider/ffi"
 	"github.com/seasonjs/stable-diffusion/pkg/types"
-	"unsafe"
 )
 
 // FFITypeSampleParams 是SampleParams结构体的ffi.Type定义
@@ -27,6 +29,7 @@ var FFITypeSampleParams = ffi.NewType(
 )
 
 type SlgParams struct {
+	_          structs.HostLayout
 	Layers     *int32
 	LayerCount int64
 	LayerStart float32
@@ -35,6 +38,7 @@ type SlgParams struct {
 }
 
 type GuidanceParams struct {
+	_                 structs.HostLayout
 	TxtCfg            float32
 	ImgCfg            float32
 	DistilledGuidance float32
@@ -42,9 +46,10 @@ type GuidanceParams struct {
 }
 
 type SampleParams struct {
+	_                 structs.HostLayout
 	Guidance          GuidanceParams
-	Scheduler         types.Scheduler
-	SampleMethod      types.SampleMethod
+	Scheduler         int32
+	SampleMethod      int32
 	SampleSteps       int32
 	Eta               float32
 	ShiftedTimestep   int32
@@ -61,6 +66,7 @@ var (
 
 	// SD_API void sd_sample_params_init(sd_sample_params_t* sample_params);
 	sampleParamsInitFun func(uintptr)
+	// sampleParamsInitFun ffi.Fun
 
 	// SD_API char* sd_sample_params_to_str(const sd_sample_params_t* sample_params);
 	sampleParamsToStrFun ffi.Fun
@@ -87,9 +93,13 @@ func LoadSampleFuns(lib ffi.Lib) error {
 	// SD_API void sd_sample_params_init(sd_sample_params_t* sample_params);
 	// 这种通过c初始化结构体的操作使用purego 进行注册
 	purego.RegisterLibFunc(&sampleParamsInitFun, lib.Addr, "sd_sample_params_init")
+	// sampleParamsInitFun, err = lib.Prep("sd_sample_params_init", &ffi.TypeVoid, &ffi.TypePointer)
+	// if err != nil {
+	// 	return err
+	// }
 
 	// SD_API char* sd_sample_params_to_str(const sd_sample_params_t* sample_params);
-	sampleParamsToStrFun, err = lib.Prep("sd_sample_params_to_str", &ffi.TypePointer, &FFITypeSampleParams)
+	sampleParamsToStrFun, err = lib.Prep("sd_sample_params_to_str", &ffi.TypePointer, &ffi.TypePointer)
 	if err != nil {
 		return err
 	}
@@ -121,6 +131,12 @@ func SampleParamsInit() SampleParams {
 	ptr := uintptr(unsafe.Pointer(structPtr))
 	sampleParamsInitFun(ptr)
 	return *structPtr
+}
+
+func SampleParamsToStr(sampleParams *SampleParams) *byte {
+	var result *byte
+	sampleParamsToStrFun.Call(unsafe.Pointer(&result), unsafe.Pointer(sampleParams))
+	return result
 }
 
 func GetDefaultSampleMethod(ctx Context) types.SampleMethod {

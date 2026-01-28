@@ -16,10 +16,6 @@ package binding
 
 // C结构体对应的Go结构体定义
 
-
-
-
-
 // type SlgParams struct {
 // 	Layers     *int32
 // 	LayerCount uintptr
@@ -45,10 +41,6 @@ package binding
 // 	CustomSigmas      *float32
 // 	CustomSigmasCount int32
 // }
-
-
-
-
 
 // type CStableDiffusion interface {
 // 	// 上下文管理
@@ -115,7 +107,6 @@ package binding
 // 	// 关闭资源
 // 	Close() error
 // }
-
 
 type CStableDiffusionImpl struct {
 	// libSd ffi.Lib
@@ -846,5 +837,3 @@ func NewCStableDiffusion(libraryPath string) (*CStableDiffusionImpl, error) {
 // 	// }
 // 	return result
 // }
-
-

@@ -17,11 +17,11 @@ func getDefaultUpscalerContext(t *testing.T) binding.UpscalerContext {
 
 	esrganPath := getTestUpscalerModelPath(t)
 	offloadParamsToCPU := false
-	direct := false
-	nThreads := int32(4)
+	direct := true
+	nThreads := int32(10)
 	tileSize := int32(128)
-	cEsrganPath,err:=utils.CString(esrganPath)
-	if err!= nil {
+	cEsrganPath, err := utils.CString(esrganPath)
+	if err != nil {
 		t.Fatal(err)
 	}
 	// 创建超分辨率上下文
@@ -65,6 +65,11 @@ func TestUpscale(t *testing.T) {
 	lib := testSetup(t)
 	defer testCleanup(lib)
 
+	libc := testSetupStd(t)
+	defer testCleanup(libc)
+
+	setDefaultLogCall(t, lib)
+
 	err := testSetupUpScaler(lib)
 	if err != nil {
 		t.Fatal(err)
@@ -76,7 +81,7 @@ func TestUpscale(t *testing.T) {
 
 	inputImage := readTestImageFromFile(t, "../../testdata/images/love_cat0.png")
 
-	var upscaleFactor uint32 = 4
+	upscaleFactor := binding.GetUpscaleFactor(upscalerCtx)
 
 	data := unsafe.SliceData(inputImage.Data)
 	ci := binding.Image{
@@ -86,8 +91,8 @@ func TestUpscale(t *testing.T) {
 		Data:    uintptr(unsafe.Pointer(&data)),
 	}
 	// 调用Upscale函数，确保它能被调用而不崩溃
-	result := binding.Upscale(upscalerCtx, ci, upscaleFactor)
-
-	goImage:= utils.GoImage(result)
+	result := binding.Upscale(upscalerCtx, ci, uint32(upscaleFactor))
+	defer utils.Free(result.Data)
+	goImage := utils.GoImage(result)
 	writeTestImageToFile(t, goImage.Data, int(goImage.Height), int(goImage.Width), "../../testdata/images/upscaler.png")
 }

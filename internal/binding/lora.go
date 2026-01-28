@@ -6,6 +6,7 @@ import (
 	"github.com/jupiterrider/ffi"
 	"github.com/seasonjs/stable-diffusion/pkg/types"
 )
+
 // FFITypeLora 是Lora结构体的ffi.Type定义
 var FFITypeLora = ffi.NewType(
 	&ffi.TypeUint8,   // IsHighNoise: bool
@@ -29,9 +30,9 @@ var (
 
 func LoadLoraFuns(lib ffi.Lib) error {
 	var err error
-	
+
 	// SD_API const char* sd_lora_apply_mode_name(enum lora_apply_mode_t mode);
-	loraApplyModeNameFun, err = lib.Prep("sd_lora_apply_mode_name", &ffi.TypePointer, &ffi.TypeSint32)	
+	loraApplyModeNameFun, err = lib.Prep("sd_lora_apply_mode_name", &ffi.TypePointer, &ffi.TypeSint32)
 	if err != nil {
 		return err
 	}
@@ -41,7 +42,7 @@ func LoadLoraFuns(lib ffi.Lib) error {
 	if err != nil {
 		return err
 	}
-	
+
 	return nil
 }
 

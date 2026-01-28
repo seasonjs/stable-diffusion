@@ -1,7 +1,7 @@
 package binding
 
 import (
-	// "structs"
+	"structs"
 
 	"github.com/jupiterrider/ffi"
 )
@@ -15,13 +15,12 @@ var FFITypeImage = ffi.NewType(
 )
 
 type Image struct {
-	// _       structs.HostLayout
+	_       structs.HostLayout
 	Width   uint32
 	Height  uint32
-	Channel uint32	
+	Channel uint32
 	Data    uintptr
 }
-
 
 // FFITypePmParams 是PmParams结构体的ffi.Type定义
 var FFITypePmParams = ffi.NewType(
@@ -40,9 +39,3 @@ var FFITypeTilingParams = ffi.NewType(
 	&ffi.TypeFloat,  // RelSizeX: float32
 	&ffi.TypeFloat,  // RelSizeY: float32
 )
-
-
-
-
-
-

@@ -80,6 +80,18 @@ func LoadToosFuncs(lib ffi.Lib) error {
 		return err
 	}
 
+	// SD_API const char* sd_rng_type_name(enum rng_type_t rng_type);
+	rngTypeNameFun, err = lib.Prep("sd_rng_type_name", &ffi.TypePointer, &ffi.TypeSint32)
+	if err != nil {
+		return err
+	}
+
+	// SD_API enum rng_type_t str_to_rng_type(const char* str);
+	strToRngTypeFun, err = lib.Prep("str_to_rng_type", &ffi.TypeSint32, &ffi.TypePointer)
+	if err != nil {
+		return err
+	}
+
 	// SD_API const char* sd_commit(void);
 	commitFun, err = lib.Prep("sd_commit", &ffi.TypePointer)
 	if err != nil {
@@ -103,7 +115,7 @@ func LoadToosFuncs(lib ffi.Lib) error {
 
 func SetProgressCallback(callback uintptr) {
 	nada := uintptr(0)
-	setProgressCallbackFun.Call(nil, unsafe.Pointer(&callback), nada)
+	setProgressCallbackFun.Call(nil, unsafe.Pointer(&callback), unsafe.Pointer(&nada))
 }
 
 func SetPreviewCallback(callback uintptr, mode types.Preview, interval int, denoised bool, noisy bool) {

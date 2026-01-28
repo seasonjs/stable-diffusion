@@ -84,7 +84,7 @@ func CheckStructOffsets(structType ffi.Type, structValue interface{}) StructOffs
 }
 
 // PrintStructOffsetResult 打印结构体偏移量检查结果
-func PrintStructOffsetResult(t *testing.T,result StructOffsetResult, structName string) {
+func PrintStructOffsetResult(t *testing.T, result StructOffsetResult, structName string) {
 	t.Logf("=== %s 结构体偏移量检查结果 ===\n", structName)
 	t.Logf("结构体大小匹配: %t, 结构体大小: %d, 结构体类型大小: %d\n", result.StructSizeMatch, result.StructSize, result.StructTypeSize)
 	t.Logf("总字段数: %d, 匹配字段数: %d\n", result.TotalFields, result.MatchedFields)
@@ -107,23 +107,23 @@ func CheckAnyStructOffsets(structType ffi.Type, structValue interface{}) StructO
 func TestCheckCtxParamsOffsets(t *testing.T) {
 	var image binding.Image
 	result := CheckAnyStructOffsets(binding.FFITypeImage, image)
-	PrintStructOffsetResult(t,result, "Image")
+	PrintStructOffsetResult(t, result, "Image")
 
 	offsets := make([]uint64, 4)
 
-    // 4. 调用 GetStructOffsets
-    status := ffi.GetStructOffsets(ffi.DefaultAbi, &binding.FFITypeImage, &offsets[0])
+	// 4. 调用 GetStructOffsets
+	status := ffi.GetStructOffsets(ffi.DefaultAbi, &binding.FFITypeImage, &offsets[0])
 
-    if status == ffi.OK {
-        fmt.Printf("Total Size: %d, Alignment: %d\n", binding.FFITypeImage.Size, binding.FFITypeImage.Alignment)
-        fmt.Printf("Offsets:\n")
-        fmt.Printf("  width:   %d\n", offsets[0])
-        fmt.Printf("  height:  %d\n", offsets[1])
-        fmt.Printf("  channel: %d\n", offsets[2])
-        fmt.Printf("  data:    %d\n", offsets[3])
-    } else {
-        fmt.Printf("Failed to get offsets: %v\n", status)
-    }
+	if status == ffi.OK {
+		fmt.Printf("Total Size: %d, Alignment: %d\n", binding.FFITypeImage.Size, binding.FFITypeImage.Alignment)
+		fmt.Printf("Offsets:\n")
+		fmt.Printf("  width:   %d\n", offsets[0])
+		fmt.Printf("  height:  %d\n", offsets[1])
+		fmt.Printf("  channel: %d\n", offsets[2])
+		fmt.Printf("  data:    %d\n", offsets[3])
+	} else {
+		fmt.Printf("Failed to get offsets: %v\n", status)
+	}
 }
 
 // // CheckImageOffsets 检查Image结构体偏移量（示例：使用改进后的工具）

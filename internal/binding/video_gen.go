@@ -1,10 +1,9 @@
 package binding
 
-
 import (
-	"unsafe"
 	"github.com/ebitengine/purego"
 	"github.com/jupiterrider/ffi"
+	"unsafe"
 )
 
 type VidGenParams struct {
@@ -54,39 +53,34 @@ var FFITypeVidGenParams = ffi.NewType(
 	&ffi.TypePointer, // Cache: *CacheParams
 )
 
-
 var (
 	// SD_API void sd_vid_gen_params_init(sd_vid_gen_params_t* sd_vid_gen_params);
 	vidGenParamsInit func(uintptr)
 
 	// SD_API sd_image_t* generate_video(sd_ctx_t* sd_ctx, const sd_vid_gen_params_t* sd_vid_gen_params, int* num_frames_out);
-	generateVideo ffi.Fun
+	generateVideo func(uintptr, uintptr, uintptr) uintptr
 )
 
 func LoadVideoGenFuns(lib ffi.Lib) error {
-	var err error
-	
+
 	// SD_API void sd_vid_gen_params_init(sd_vid_gen_params_t* sd_vid_gen_params);
 	purego.RegisterLibFunc(&vidGenParamsInit, lib.Addr, "sd_vid_gen_params_init")
-	
+
 	// SD_API sd_image_t* generate_video(sd_ctx_t* sd_ctx, const sd_vid_gen_params_t* sd_vid_gen_params, int* num_frames_out);
-	generateVideo, err = lib.Prep("generate_video", &ffi.TypePointer, &ffi.TypePointer, &ffi.TypeSint32)
-	if err != nil {
-		return err
-	}
+	purego.RegisterLibFunc(&generateVideo, lib.Addr, "generate_video")
+
 	return nil
 }
 
 func VideoGenParamsInit() VidGenParams {
-	//这里需要分配到堆上，防止内存发生漂移
 	structPtr := new(VidGenParams)
 	ptr := uintptr(unsafe.Pointer(structPtr))
 	vidGenParamsInit(ptr)
 	return *structPtr
 }
 
-func GenerateVideo(params VidGenParams) uintptr {
+func GenerateVideo(ctx Context, params VidGenParams, numFramesOut *int32) uintptr {
 	var result uintptr
-	generateVideo.Call(unsafe.Pointer(&result), unsafe.Pointer(&params))
+	result = generateVideo(uintptr(ctx), uintptr(unsafe.Pointer(&params)), uintptr(unsafe.Pointer(numFramesOut)))
 	return result
 }

@@ -10,6 +10,6 @@ func CString(s string) (*byte, error) {
 }
 
 // GoString converts a C-style null-terminated byte pointer to a Go string.
-func GoString(p *byte) string {
+func goByteString(p *byte) string {
 	return unix.BytePtrToString(p)
 }

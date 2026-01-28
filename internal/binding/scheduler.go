@@ -36,7 +36,7 @@ func LoadSchedulerFuns(lib ffi.Lib) error {
 	// SD_API enum scheduler_t sd_get_default_scheduler(const sd_ctx_t* sd_ctx, enum sample_method_t sample_method);
 	getDefaultSchedulerFun, err = lib.Prep("sd_get_default_scheduler", &ffi.TypeSint32, &ffi.TypePointer)
 	if err != nil {
-			return err
+		return err
 	}
 	return nil
 }
