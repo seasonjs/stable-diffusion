@@ -2,7 +2,7 @@ package binding
 
 import (
 	"github.com/jupiterrider/ffi"
-	"github.com/seasonjs/stable-diffusion/pkg/types"
+
 	"unsafe"
 )
 
@@ -32,14 +32,14 @@ func LoadPredictionFuns(lib ffi.Lib) error {
 	return nil
 }
 
-func PredictionName(prediction types.Prediction) *byte {
+func PredictionName(prediction int32) *byte {
 	var result *byte
 	predictionName.Call(unsafe.Pointer(&result), unsafe.Pointer(&prediction))
 	return result
 }
 
-func StrToPrediction(str *byte) types.Prediction {
+func StrToPrediction(str *byte) int32 {
 	var result int32
 	strToPrediction.Call(unsafe.Pointer(&result), unsafe.Pointer(&str))
-	return types.Prediction(result)
+	return result
 }

@@ -52,7 +52,7 @@ func TestSetPreviewCallback(t *testing.T) {
 	interval := 10
 	denoised := true
 	noisy := false
-	binding.SetPreviewCallback(callback, mode, interval, denoised, noisy)
+	binding.SetPreviewCallback(callback, int32(mode), interval, denoised, noisy)
 	t.Log("SetPreviewCallback called successfully")
 }
 
@@ -111,7 +111,7 @@ func TestTypeName(t *testing.T) {
 	}
 
 	for _, tType := range testTypes {
-		namePtr := binding.TypeName(tType)
+		namePtr := binding.TypeName(int32(tType))
 		if namePtr == nil {
 			t.Fatalf("TypeName returned nil for type: %d", tType)
 		}
@@ -168,7 +168,7 @@ func TestRngTypeName(t *testing.T) {
 	}
 
 	for _, tType := range testTypes {
-		namePtr := binding.RngTypeName(tType)
+		namePtr := binding.RngTypeName(int32(tType))
 		if namePtr == nil {
 			t.Fatalf("RngTypeName returned nil for type: %d", tType)
 		}

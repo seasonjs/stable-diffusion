@@ -6,7 +6,6 @@ import (
 	"unsafe"
 
 	"github.com/jupiterrider/ffi"
-	"github.com/seasonjs/stable-diffusion/pkg/types"
 )
 
 // FFITypeSampleParams 是SampleParams结构体的ffi.Type定义
@@ -113,16 +112,16 @@ func LoadSampleFuns(lib ffi.Lib) error {
 	return nil
 }
 
-func SampleMethodName(sampleMethod types.SampleMethod) *byte {
+func SampleMethodName(sampleMethod int32) *byte {
 	var result *byte
 	sampleMethodNameFun.Call(unsafe.Pointer(&result), unsafe.Pointer(&sampleMethod))
 	return result
 }
 
-func StrToSampleMethod(str *byte) types.SampleMethod {
+func StrToSampleMethod(str *byte) int32 {
 	var result int32
 	strToSampleMethodFun.Call(unsafe.Pointer(&result), unsafe.Pointer(&str))
-	return types.SampleMethod(result)
+	return result
 }
 
 func SampleParamsInit() SampleParams {
@@ -139,8 +138,8 @@ func SampleParamsToStr(sampleParams *SampleParams) *byte {
 	return result
 }
 
-func GetDefaultSampleMethod(ctx Context) types.SampleMethod {
+func GetDefaultSampleMethod(ctx Context) int32 {
 	var result int32
 	getDefaultSampleMethodFun.Call(unsafe.Pointer(&result), unsafe.Pointer(&ctx))
-	return types.SampleMethod(result)
+	return result
 }

@@ -33,7 +33,7 @@ func TestPredictionName(t *testing.T) {
 	}
 
 	for _, prediction := range predictions {
-		namePtr := binding.PredictionName(prediction)
+		namePtr := binding.PredictionName(int32(prediction))
 		if namePtr == nil {
 			t.Errorf("PredictionName returned nil for prediction %d", prediction)
 			continue
@@ -91,7 +91,7 @@ func TestPredictionRoundTrip(t *testing.T) {
 	}
 
 	for _, prediction := range predictions {
-		namePtr := binding.PredictionName(prediction)
+		namePtr := binding.PredictionName(int32(prediction))
 		if namePtr == nil {
 			t.Errorf("PredictionName returned nil for prediction %d", prediction)
 			continue

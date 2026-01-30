@@ -4,7 +4,6 @@ import (
 	"unsafe"
 
 	"github.com/jupiterrider/ffi"
-	"github.com/seasonjs/stable-diffusion/pkg/types"
 )
 
 // FFITypeLora 是Lora结构体的ffi.Type定义
@@ -46,14 +45,14 @@ func LoadLoraFuns(lib ffi.Lib) error {
 	return nil
 }
 
-func LoraApplyModeName(mode types.LoraApplyMode) *byte {
+func LoraApplyModeName(mode int32) *byte {
 	var result *byte
 	loraApplyModeNameFun.Call(unsafe.Pointer(&result), unsafe.Pointer(&mode))
 	return result
 }
 
-func StrToLoraApplyMode(str *byte) types.LoraApplyMode {
+func StrToLoraApplyMode(str *byte) int32 {
 	var result int32
 	strToLoraApplyModeFun.Call(unsafe.Pointer(&result), unsafe.Pointer(&str))
-	return types.LoraApplyMode(result)
+	return result
 }

@@ -30,7 +30,7 @@ func TestLoraApplyModeName(t *testing.T) {
 	}
 
 	for _, mode := range modes {
-		namePtr := binding.LoraApplyModeName(mode)
+		namePtr := binding.LoraApplyModeName(int32(mode))
 		if namePtr == nil {
 			t.Errorf("LoraApplyModeName returned nil for mode %d", mode)
 			continue
@@ -93,7 +93,7 @@ func TestLoraApplyModeRoundTrip(t *testing.T) {
 	}
 
 	for _, mode := range modes {
-		namePtr := binding.LoraApplyModeName(mode)
+		namePtr := binding.LoraApplyModeName(int32(mode))
 		if namePtr == nil {
 			t.Errorf("LoraApplyModeName returned nil for mode %d", mode)
 			continue

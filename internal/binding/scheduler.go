@@ -4,7 +4,6 @@ import (
 	"unsafe"
 
 	"github.com/jupiterrider/ffi"
-	"github.com/seasonjs/stable-diffusion/pkg/types"
 )
 
 var (
@@ -42,22 +41,22 @@ func LoadSchedulerFuns(lib ffi.Lib) error {
 }
 
 // SchedulerName 获取调度器名称
-func SchedulerName(scheduler types.Scheduler) *byte {
+func SchedulerName(scheduler int32) *byte {
 	var result *byte
 	schedulerNameFun.Call(unsafe.Pointer(&result), unsafe.Pointer(&scheduler))
 	return result
 }
 
 // StrToScheduler 将字符串转换为调度器
-func StrToScheduler(str *byte) types.Scheduler {
+func StrToScheduler(str *byte) int32 {
 	var result int32
 	strToSchedulerFun.Call(unsafe.Pointer(&result), unsafe.Pointer(&str))
-	return types.Scheduler(result)
+	return result
 }
 
 // GetDefaultScheduler 获取默认调度器
-func GetDefaultScheduler(ctx Context, sampleMethod types.SampleMethod) types.Scheduler {
+func GetDefaultScheduler(ctx Context, sampleMethod int32) int32 {
 	var result int32
 	getDefaultSchedulerFun.Call(unsafe.Pointer(&result), unsafe.Pointer(&ctx), unsafe.Pointer(&sampleMethod))
-	return types.Scheduler(result)
+	return result
 }

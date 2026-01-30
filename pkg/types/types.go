@@ -1,5 +1,10 @@
 package types
 
+import (
+	"errors"
+	"io"
+)
+
 type RNGType int32
 
 type SampleMethod int32
@@ -16,8 +21,14 @@ type Preview int32
 
 type LoraApplyMode int32
 
-type CacheMode int
+type CacheMode int32
 
+type ImageType int32
+
+const (
+	PNG ImageType = iota
+	JPEG
+)
 const (
 	SD_CACHE_DISABLED CacheMode = iota
 	SD_CACHE_EASYCACHE
@@ -138,6 +149,53 @@ type Image struct {
 	Channel uint32
 	Data    []byte
 }
+
+type PmParams struct {
+	IdImages       []io.Reader
+	IdImagesCount int32
+	IdEmbedPath   string
+	StyleStrength float32
+}
+
+type TilingParams struct {
+	Enabled       bool
+	TileSizeX     int32
+	TileSizeY     int32
+	TargetOverlap float32
+	RelSizeX      float32
+	RelSizeY      float32
+}
+
+type ImgGenParams struct {
+	Lora               []Lora
+	LoraCount          uint32
+	Prompt             string
+	NegativePrompt     string
+	ClipSkip           int32
+	InitImage          io.Reader
+	RefImages          []io.Reader
+	RefImagesCount     int32
+	AutoResizeRefImage bool
+	IncreaseRefIndex   bool
+	MaskImage          io.Reader
+	Width              int32
+	Height             int32
+	SampleParams       SampleParams
+	Strength           float32
+	Seed               int64
+	BatchCount         int32
+	ControlImage       Image
+	ControlStrength    float32
+	PmParams           PmParams
+	VaeTilingParams    TilingParams
+	Cache              CacheParams
+}
+
+var (
+	ImgGenParamsEmptyError = errors.New("img gen params is empty")
+)
+
+type LogCallback func(level LogLevel, text string)
 
 // ProgressCallback 进度回调函数类型
 type ProgressCallback func(step, steps int, time float32)

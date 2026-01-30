@@ -41,7 +41,7 @@ func TestSampleMethodName(t *testing.T) {
 	}
 
 	for _, method := range methods {
-		namePtr := binding.SampleMethodName(method)
+		namePtr := binding.SampleMethodName(int32(method))
 		if namePtr == nil {
 			t.Errorf("SampleMethodName returned nil for method %d", method)
 			continue
@@ -105,7 +105,7 @@ func TestSampleMethodRoundTrip(t *testing.T) {
 	}
 
 	for _, method := range methods {
-		namePtr := binding.SampleMethodName(method)
+		namePtr := binding.SampleMethodName(int32(method))
 		if namePtr == nil {
 			t.Errorf("SampleMethodName returned nil for method %d", method)
 			continue
@@ -207,7 +207,7 @@ func TestGetDefaultSampleMethod(t *testing.T) {
 
 	defaultMethod := binding.GetDefaultSampleMethod(ctx)
 	t.Logf("Default method: %d", defaultMethod)
-	if defaultMethod == types.SAMPLE_METHOD_COUNT {
+	if defaultMethod == int32(types.SAMPLE_METHOD_COUNT) {
 		t.Errorf("GetDefaultSampleMethod returned default method SAMPLE_METHOD_COUNT")
 	}
 }

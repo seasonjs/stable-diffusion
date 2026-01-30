@@ -2,7 +2,6 @@ package binding
 
 import (
 	"github.com/jupiterrider/ffi"
-	"github.com/seasonjs/stable-diffusion/pkg/types"
 	"unsafe"
 )
 
@@ -31,14 +30,14 @@ func LoadPreviewFuns(lib ffi.Lib) error {
 	return nil
 }
 
-func PreviewName(preview types.Preview) *byte {
+func PreviewName(preview int32) *byte {
 	var result *byte
 	previewNameFun.Call(unsafe.Pointer(&result), unsafe.Pointer(&preview))
 	return result
 }
 
-func StrToPreview(str *byte) types.Preview {
+func StrToPreview(str *byte) int32 {
 	var result int32
 	strToPreviewFun.Call(unsafe.Pointer(&result), unsafe.Pointer(&str))
-	return types.Preview(result)
+	return result
 }

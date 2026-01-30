@@ -31,7 +31,7 @@ func TestPreviewName(t *testing.T) {
 	}
 
 	for _, preview := range previews {
-		namePtr := binding.PreviewName(preview)
+		namePtr := binding.PreviewName(int32(preview))
 		if namePtr == nil {
 			t.Errorf("PreviewName returned nil for preview %d", preview)
 			continue
@@ -87,7 +87,7 @@ func TestPreviewRoundTrip(t *testing.T) {
 	}
 
 	for _, preview := range previews {
-		namePtr := binding.PreviewName(preview)
+		namePtr := binding.PreviewName(int32(preview))
 		if namePtr == nil {
 			t.Errorf("PreviewName returned nil for preview %d", preview)
 			continue

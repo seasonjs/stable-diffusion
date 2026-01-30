@@ -4,7 +4,6 @@ import (
 	"unsafe"
 
 	"github.com/jupiterrider/ffi"
-	"github.com/seasonjs/stable-diffusion/pkg/types"
 )
 
 var (
@@ -118,7 +117,7 @@ func SetProgressCallback(callback uintptr) {
 	setProgressCallbackFun.Call(nil, unsafe.Pointer(&callback), unsafe.Pointer(&nada))
 }
 
-func SetPreviewCallback(callback uintptr, mode types.Preview, interval int, denoised bool, noisy bool) {
+func SetPreviewCallback(callback uintptr, mode int32, interval int, denoised bool, noisy bool) {
 	nada := uintptr(0)
 	setPreviewCallbackFun.Call(nil, unsafe.Pointer(&callback), unsafe.Pointer(&mode), unsafe.Pointer(&interval), unsafe.Pointer(&denoised), unsafe.Pointer(&noisy), unsafe.Pointer(&nada))
 }
@@ -135,31 +134,31 @@ func GetSystemInfo() *byte {
 	return result
 }
 
-func TypeName(t types.SdType) *byte {
+func TypeName(t int32) *byte {
 	var result *byte
 	typeNameFun.Call(unsafe.Pointer(&result), unsafe.Pointer(&t))
 	return result
 }
 
-func StrToSdType(str *byte) types.SdType {
+func StrToSdType(str *byte) int32 {
 	var result int32
 	strToSdTypeFun.Call(unsafe.Pointer(&result), unsafe.Pointer(&str))
-	return types.SdType(result)
+	return result
 }
 
-func RngTypeName(t types.RNGType) *byte {
+func RngTypeName(t int32) *byte {
 	var result *byte
 	rngTypeNameFun.Call(unsafe.Pointer(&result), unsafe.Pointer(&t))
 	return result
 }
 
-func StrToRngType(str *byte) types.RNGType {
+func StrToRngType(str *byte) int32 {
 	var result int32
 	strToRngTypeFun.Call(unsafe.Pointer(&result), unsafe.Pointer(&str))
-	return types.RNGType(result)
+	return result
 }
 
-func Convert(inputPath, vaePath, outputPath string, outputType types.SdType, tensorTypeRules string, convertName bool) bool {
+func Convert(inputPath, vaePath, outputPath *byte, outputType int32, tensorTypeRules *byte, convertName bool) bool {
 	var result ffi.Arg
 	convertFun.Call(unsafe.Pointer(&result), unsafe.Pointer(&inputPath), unsafe.Pointer(&vaePath), unsafe.Pointer(&outputPath), unsafe.Pointer(&outputType), unsafe.Pointer(&tensorTypeRules), unsafe.Pointer(&convertName))
 	return result.Bool()
